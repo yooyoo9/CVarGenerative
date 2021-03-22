@@ -8,7 +8,7 @@ class CVaR_EM(GaussianMixture):
                  reg_covar=1e-6, max_iter=100, n_init=1, init_params='kmeans',
                  weights_init=None, means_init=None, precisions_init=None,
                  random_state=None, warm_start=False,
-                 verbose=0, verbose_interval=10, k=30, epsilon=1e-2):
+                 verbose=0, verbose_interval=10, k=150, epsilon=1e-2):
         super().__init__(
             n_components=n_components, covariance_type=covariance_type,
             tol=tol, reg_covar=reg_covar, max_iter=max_iter, n_init=n_init,
@@ -29,9 +29,9 @@ class CVaR_EM(GaussianMixture):
         while True:
             old = new
             log_prob = self._estimate_log_prob(X)
-            weights = np.broadcast_to(self.weights_, log_prob.shape)
-            log_marginal_prob = log_prob + weights
-            ind = np.argsort(np.sum(log_resp @ log_marginal_prob.T, axis=1))
+            weights = np.log(np.broadcast_to(self.weights_, log_prob.shape))
+            log_marginal_prob = log_resp @ (log_prob + weights).T
+            ind = np.argsort(np.sum(log_marginal_prob, axis=1))[:self.k]
             new = np.sum(log_marginal_prob[ind])
             if np.abs(new - old) < self.epsilon:
                 break
