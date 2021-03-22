@@ -12,8 +12,8 @@ from PIL import Image, ImageFilter
 from adacvar.util.cvar import CVaR
 from adacvar.util.adaptive_algorithm import Exp3Sampler
 
-from cvar_train_img import cvar_train
-from train_img import train
+from train_cvar import cvar_train
+from train_vae import train
 
 seed = 31415
 np.random.seed(seed)
@@ -40,14 +40,14 @@ param = {
     'epochs' : 50,
     'batch_size' : 64,
     'lr' : 0.0001,
-    'img_size' : 50,
+    'img_size' : 100,
     'transform' : transforms.ToTensor(),
     'hidden_dims' : [512],
     'z_dim' : 8,
     'alpha' : 0.3,
-    'path_vae': '../models/vae',
-    'path_cvar': '../models/vae_cvar',
-    'path_out': '../output/'
+    'path_vae': '../models/vae_100',
+    'path_cvar': '../models/vae_cvar_100',
+    'path_out': '../output/out100/'
 }
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
