@@ -5,7 +5,7 @@ from sklearn.mixture import GaussianMixture
 
 import matplotlib.pyplot as plt
 from itertools import cycle, islice
-from cvar_em import CVaR_EM
+from adacvar_em import AdaCVaR_EM
 
 np.random.seed(31415)
 
@@ -42,8 +42,8 @@ def predict(algorithm, X):
 
 fig = plt.figure(figsize=[10, 6])
 for i in range(param['n']):
-    if i%10 == 0:
-        print(i)
+    # if i%10 == 0:
+    print(i)
     n_clusters = np.random.randint(1, 6)
 
     std = 4.0 * np.random.rand(n_clusters)
@@ -53,7 +53,7 @@ for i in range(param['n']):
     X, y = datasets.make_blobs(n_samples = sample_distr, cluster_std=std)
     X = StandardScaler().fit_transform(X)
 
-    cvar = CVaR_EM(
+    cvar = AdaCVaR_EM(
         max_iter=1000, n_components=n_clusters, covariance_type='full')
     gmm = GaussianMixture(
         n_components=n_clusters, covariance_type='full')
