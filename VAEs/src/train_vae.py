@@ -3,10 +3,11 @@ import torch
 
 def train(model, optimizer, criterion, train_loader,
           valid_loader, epochs, device, path):
+    model.train()
     for epoch_idx in range(epochs):
         print(f"Epoch {epoch_idx+1} of {epochs}")
         running_loss = 0.0
-        for batch_idx, (data, _) in enumerate(train_loader):
+        for batch_idx, (data, *_) in enumerate(train_loader):
             data = data.to(device)
             data = data.view(data.size(0), -1)
             optimizer.zero_grad()
@@ -26,7 +27,7 @@ def evaluate(model, criterion, data_loader, device, epoch):
     model.eval()
     running_loss = 0.0
     with torch.no_grad():
-        for (data, _) in data_loader:
+        for (data, *_) in data_loader:
             data = data.to(device)
             data = data.view(data.size(0), -1)
             recons, mu, logvar = model(data)
