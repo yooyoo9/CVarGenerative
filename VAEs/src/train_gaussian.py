@@ -35,7 +35,7 @@ class GaussianDataSet(Dataset):
 
 # learning param
 param = {
-    'epochs' : 100,
+    'epochs' : 5,
     'batch_size' : 64,
     'lr' : 1e-3,
     'decay': 1e-3,
@@ -44,10 +44,15 @@ param = {
     'hidden_dims' : [500, 200],
     'z_dim' : 4,
     'alpha' : 0.3,
+    'dir': ['../models/', '../output/out_gaussian/'],
     'path_vae': '../models/vae_gaussian',
     'path_cvar': '../models/vae_gaussian_cvar',
     'path_out': '../output/out_gaussian/'
 }
+
+for cur_dir in param['dir']:
+    if not os.path.exists(cur_dir):
+        os.makedirs(cur_dir)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 train_set = GaussianDataSet('../data_train.npy', param['transform'])
