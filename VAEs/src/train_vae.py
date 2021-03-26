@@ -1,8 +1,9 @@
 import numpy as np
 import torch
+import matplotlib.pyplot as plt
 
 def train(model, optimizer, criterion, train_loader,
-          valid_loader, epochs, device, path):
+          valid_loader, epochs, device, path, save):
     model.train()
     for epoch_idx in range(epochs):
         print(f"Epoch {epoch_idx+1} of {epochs}")
@@ -20,7 +21,8 @@ def train(model, optimizer, criterion, train_loader,
         train_loss = running_loss/len(train_loader.dataset)
         val_loss = evaluate(model, criterion, valid_loader, device, epoch_idx)
         print(f"Train Loss: {train_loss:.4f}   Val Loss: {val_loss:.4f}")
-    torch.save(model, path)
+    if save:
+        torch.save(model, path)
 
 
 def evaluate(model, criterion, data_loader, device, epoch):

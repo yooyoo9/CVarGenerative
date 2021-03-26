@@ -2,7 +2,7 @@ import numpy as np
 import torch
 
 def cvar_train(model, optimizer, criterion, cvar, train_loader, adaptive_algorithm,
-               valid_loader, epochs, alpha, device, path):
+               valid_loader, epochs, alpha, device, path, save):
     for epoch_idx in range(epochs):
         print(f"Epoch {epoch_idx+1} of {epochs}")
         model.train()
@@ -36,7 +36,8 @@ def cvar_train(model, optimizer, criterion, cvar, train_loader, adaptive_algorit
         val_loss = cvar_evaluate(model, criterion, valid_loader, alpha, device,
                                  epoch_idx)
         print(f"Train Loss: {train_loss:.4f}   Val Loss: {val_loss:.4f}")
-    torch.save(model, path)
+    if save:
+        torch.save(model, path)
 
 
 def cvar_evaluate(model, criterion, data_loader, alpha, device, epoch):

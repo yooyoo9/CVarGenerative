@@ -12,7 +12,6 @@ class VAE(nn.Module):
         # Encoder
         modules = []
         cur = x_dim
-        print(cur)
         for h_dim in hidden_dims:
             modules.append(
                 nn.Sequential(nn.Linear(cur, h_dim), nn.ReLU())
@@ -103,19 +102,6 @@ class VAE(nn.Module):
         """Computes the loss function."""
 
         # Reconstruction loss
-        '''
-        Trying some sorting
-        recons = recons.view(-1, 500, 2)
-        d1, d2, _ = recons.size()
-        ind = np.empty(recons.shape)
-        for i in range(d1):
-            ind[i] = find_indices(x[i].to_numpy(), recons[i].to_numpy())
-        ind = torch.tensor(
-        recons = recons[
-            torch.arange(d1).unsqueeze(1).repeat((1, d2)).flatten(),
-            ind.flatten()
-        ].view(d1, 1000)
-        '''
         rec_loss = torch.sum(criterion(recons, x), dim=1)
 
         # Kl-Divergence
