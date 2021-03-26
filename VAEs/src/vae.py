@@ -2,22 +2,19 @@ import torch
 from torch import nn
 import numpy as np
 
-import networkx as nx
 
 class VAE(nn.Module):
     def __init__(self, x_dim, hidden_dims, z_dim, beta=0, constrained_output=False):
         super().__init__()
         self.z_dim = z_dim
-        
+
         # Encoder
         modules = []
         cur = x_dim
         for h_dim in hidden_dims:
-            modules.append(
-                nn.Sequential(nn.Linear(cur, h_dim), nn.ReLU())
-            )
+            modules.append(nn.Sequential(nn.Linear(cur, h_dim), nn.ReLU()))
             cur = h_dim
-        modules.append(nn.Linear(cur, 2*z_dim))
+        modules.append(nn.Linear(cur, 2 * z_dim))
         self.encoder = nn.Sequential(*modules)
 
         # Decoder
@@ -25,9 +22,7 @@ class VAE(nn.Module):
         cur = z_dim
         hidden_dims.reverse()
         for h_dim in hidden_dims:
-            modules.append(
-                nn.Sequential(nn.Linear(cur, h_dim), nn.ReLU())
-            )
+            modules.append(nn.Sequential(nn.Linear(cur, h_dim), nn.ReLU()))
             cur = h_dim
         modules.append(nn.Sequential(nn.Linear(cur, x_dim)))
 
@@ -51,7 +46,7 @@ class VAE(nn.Module):
         """
         result = self.encoder(x)
         result = result.view(-1, 2, self.z_dim)
-        
+
         mu = result[:, 0]
         logvar = result[:, 1]
         return mu, logvar
@@ -87,7 +82,7 @@ class VAE(nn.Module):
         samples: Tensor
             Samples from the Gaussian
         """
-        
+
         std = torch.exp(0.5 * logvar)
         eps = torch.randn_like(std)
         return eps * std + mu
@@ -104,6 +99,6 @@ class VAE(nn.Module):
         rec_loss = torch.sum(criterion(recons, x), dim=1)
 
         # Kl-Divergence
-        kl_loss = -0.5 * torch.sum(1 + logvar - mu**2 - logvar.exp(), dim=1)
+        kl_loss = -0.5 * torch.sum(1 + logvar - mu ** 2 - logvar.exp(), dim=1)
         loss = rec_loss + self.beta * kl_loss
         return loss
