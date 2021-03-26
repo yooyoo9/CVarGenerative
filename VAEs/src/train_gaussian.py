@@ -23,7 +23,10 @@ torch.manual_seed(seed)
 class GaussianDataSet(Dataset):
     def __init__(self, path, transform, nb):
         self.transform = transform
-        self.data = np.load(path)[nb]
+        data = np.load(path)[nb]
+        data = data - data.mean(axis=0)
+        data = data / data.std(axis=0)
+        self.data = data
         print(self.data.shape)
 
     def __len__(self):
@@ -36,7 +39,8 @@ class GaussianDataSet(Dataset):
 # learning param
 param = {
     'epochs' : 100,
-    'batch_size' : 64,
+    'batch_size' : 200,
+    'beta': 0.0,
     'lr' : 1e-4,
     'decay': 0,
     'transform' : transforms.ToTensor(),
@@ -101,7 +105,9 @@ for i in range(param['nb']):
         model_vae = VAE(
             x_dim=param['x_dim'],
             hidden_dims=param['hidden_dims'],
-            z_dim = param['z_dim'])
+            z_dim = param['z_dim'],
+            beta=param['beta']
+        )
     model_vae.to(device)
     optimizer_vae = optim.Adam(model_vae.parameters(), lr=param['lr'],
                                weight_decay=param['decay'])
