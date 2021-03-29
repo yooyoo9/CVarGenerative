@@ -15,6 +15,7 @@ class VAEalg:
         self, model_path, model_param, train_set, valid_set, batch_size, lr, criterion
     ):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.model_path = model_path
 
         if os.path.exists(model_path):
             self.model = torch.load(model_path)
@@ -24,15 +25,16 @@ class VAEalg:
                 hidden_dims=model_param["hidden_dims"],
                 z_dim=model_param["z_dim"],
                 beta=model_param["beta"],
+                constrained_output=model_param["constrained_output"]
             )
-        self.model_vae.to(self.device)
+        self.model.to(self.device)
 
         self.train_loader = DataLoader(train_set, batch_size)
         self.val_loader = DataLoader(valid_set, batch_size)
         self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
         self.criterion = criterion
 
-    def train(self, epochs, save_model):
+    def train(self, epochs, save_model, out):
         """Trains the VAE using the training set
 
         Parameters
@@ -44,7 +46,8 @@ class VAEalg:
         """
         self.model.train()
         for epoch_idx in range(epochs):
-            print(f"Epoch {epoch_idx+1} of {epochs}")
+            if out:
+                print(f"Epoch {epoch_idx+1} of {epochs}")
             running_loss = 0.0
             for batch_idx, (data, *_) in enumerate(self.train_loader):
                 data = data.to(self.device)
@@ -58,7 +61,8 @@ class VAEalg:
                 self.optimizer.step()
             train_loss = running_loss / len(self.train_loader.dataset)
             val_loss = self.evaluate()
-            print(f"Train Loss: {train_loss:.4f}   Val Loss: {val_loss:.4f}")
+            if out:
+                print(f"Train Loss: {train_loss:.4f}   Val Loss: {val_loss:.4f}")
         if save_model:
             torch.save(self.model, self.model_path)
 
@@ -114,7 +118,7 @@ class CVaRalg(VAEalg):
         self.cvar = CVaR(alpha=1, learning_rate=0).to(self.device)
         self.k = int(np.ceil(alpha * len(self.val_loader.dataset)))
 
-    def train(epochs, save_model):
+    def train(self, epochs, save_model, out):
         """Trains the CVaR VAE using the training set
 
         Parameters
@@ -125,7 +129,8 @@ class CVaRalg(VAEalg):
             If set to true, saves the model after training
         """
         for epoch_idx in range(epochs):
-            print(f"Epoch {epoch_idx+1} of {epochs}")
+            if out:
+                print(f"Epoch {epoch_idx+1} of {epochs}")
             self.model.train()
             running_loss = 0.0
             for batch_idx, (data, idx) in enumerate(self.train_loader):
@@ -157,9 +162,10 @@ class CVaRalg(VAEalg):
 
             train_loss = running_loss / len(self.train_loader.dataset)
             val_loss = self.evaluate()
-            print(f"Train Loss: {train_loss:.4f}   Val Loss: {val_loss:.4f}")
-        if model_save:
-            torch.save(self.model, self.path)
+            if out:
+                print(f"Train Loss: {train_loss:.4f}   Val Loss: {val_loss:.4f}")
+        if save_model:
+            torch.save(self.model, self.model_path)
 
     def evaluate(self):
         """Evaluates the CVaR VAE using the validation data.
@@ -176,6 +182,7 @@ class CVaRalg(VAEalg):
         with torch.no_grad():
             for data, _ in self.val_loader:
                 count += data.shape[0]
+                data = data.to(self.device)
                 data = data.view(data.size(0), -1)
                 recons, mu, logvar = self.model(data)
                 losses = self.model.loss(data, recons, mu, logvar, self.criterion).sort(

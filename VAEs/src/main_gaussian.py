@@ -7,7 +7,7 @@ from sklearn import cluster, datasets
 
 from train import VAEalg, CVaRalg
 
-seed = 31415
+seed = 764003779
 np.random.seed(seed)
 torch.manual_seed(seed)
 
@@ -37,21 +37,23 @@ class GaussianDataSet(Dataset):
 
 
 # learning params
-model_param = {"x_dim": 2, "hidden_dims": [100], "z_dim": 16, "beta": 0.0}
+model_param = {"x_dim": 2, "hidden_dims": [100], "z_dim": 16, "beta": 0.0,
+               "constrained_output": False}
 
 param = {
-    "epochs": 50,
+    "epochs": 100,
     "batch_size": 200,
     "lr": 1e-4,
     "alpha": 0.3,
-    "dir": ["../models/", "../output/out_gaussian/"],
-    "path_data": "../data.npy",
-    "path_vae": "../models/vae_gaussian",
-    "path_cvar": "../models/vae_gaussian_cvar",
+    "print": False,
+    "save_model": True,
+    "nb": 100,  # number of datasets
+    "data_size": 1000,
+    "dir": ["../models/", "../output/out_gaussian/", 'input/gaussian/'],
+    "path_data": "../input/gaussian/data.npy",
+    "path_vae": "../models/gaussian/vae",
+    "path_cvar": "../models/gaussian/cvar",
     "path_out": "../output/out_gaussian/",
-    "save_model": False,
-    "nb": 10,  # number of datasets
-    "data_size": 5000,
 }
 
 criterion = torch.nn.MSELoss(reduction="none")
@@ -65,14 +67,23 @@ for cur_dir in param["dir"]:
 if not os.path.isfile(param["path_data"]):
     X = np.empty((param["nb"], param["data_size"], 2))
     for i in range(param["nb"]):
-        k = np.random.randint(2, 7)
-        std = np.random.rand(k)
+        k = np.random.randint(4, 10)
+        sample_distr = np.zeros(k)
+        while sum(sample_distr) != param['data_size']:
+            sample_distr = np.random.dirichlet(np.random.rand(k), 1)[0]
+            sample_distr = np.round(param['data_size'] * sample_distr).astype(int)
+        std = 10 * np.random.rand(k)
+        centers = 10 * np.random.rand(k, 2)
         X[i], _ = datasets.make_blobs(
-            n_samples=param["data_size"], centers=k, cluster_std=std
+            n_samples=sample_distr, centers=centers, cluster_std=std
         )
     np.save(param["path_data"], X)
 
-for i in range(param["nb"]):
+
+fig = plt.figure(figsize=[15, 6])
+# for i in range(param["nb"]):
+for i in [0, 2, 13, 31, 33, 69, 72, 82]:
+    print(f"Dataset {i} of {param['nb']}")
     train_set = GaussianDataSet(param["path_data"], i, train=True)
     valid_set = GaussianDataSet(param["path_data"], i, train=False)
 
@@ -85,7 +96,7 @@ for i in range(param["nb"]):
         param["lr"],
         criterion,
     )
-    vae.train(param["epochs"], param["save_model"])
+    vae.train(param["epochs"], param["save_model"], param["print"])
 
     cvar = CVaRalg(
         param["path_cvar"] + str(i),
@@ -97,17 +108,12 @@ for i in range(param["nb"]):
         criterion,
         param["alpha"],
     )
-    cvar.train(param["epochs"], param["save_model"])
+    cvar.train(param["epochs"], param["save_model"], param["print"])
 
     # Compare usual VAE with CVaR VAE
-    fig = plt.figure()
     ax1 = plt.subplot(1, 3, 1)
     ax2 = plt.subplot(1, 3, 2)
     ax3 = plt.subplot(1, 3, 3)
-    ax1.axis("off")
-    ax2.axis("off")
-    ax3.axis("off")
-
     vae.model.eval()
     cvar.model.eval()
     with torch.no_grad():
