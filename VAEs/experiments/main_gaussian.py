@@ -37,8 +37,13 @@ class GaussianDataSet(Dataset):
 
 
 # learning params
-model_param = {"x_dim": 2, "hidden_dims": [100], "z_dim": 16, "beta": 0.0,
-               "constrained_output": False}
+model_param = {
+    "x_dim": 2,
+    "hidden_dims": [100],
+    "z_dim": 16,
+    "beta": 0.0,
+    "constrained_output": False,
+}
 
 param = {
     "epochs": 100,
@@ -49,7 +54,7 @@ param = {
     "save_model": True,
     "nb": 100,  # number of datasets
     "data_size": 1000,
-    "dir": ["../models/", "../output/out_gaussian/", 'input/gaussian/'],
+    "dir": ["../models/", "../output/out_gaussian/", "input/gaussian/"],
     "path_data": "../input/gaussian/data.npy",
     "path_vae": "../models/gaussian/vae",
     "path_cvar": "../models/gaussian/cvar",
@@ -69,9 +74,9 @@ if not os.path.isfile(param["path_data"]):
     for i in range(param["nb"]):
         k = np.random.randint(4, 10)
         sample_distr = np.zeros(k)
-        while sum(sample_distr) != param['data_size']:
+        while sum(sample_distr) != param["data_size"]:
             sample_distr = np.random.dirichlet(np.random.rand(k), 1)[0]
-            sample_distr = np.round(param['data_size'] * sample_distr).astype(int)
+            sample_distr = np.round(param["data_size"] * sample_distr).astype(int)
         std = 10 * np.random.rand(k)
         centers = 10 * np.random.rand(k, 2)
         X[i], _ = datasets.make_blobs(

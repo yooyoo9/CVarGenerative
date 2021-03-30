@@ -25,7 +25,7 @@ class VAEalg:
                 hidden_dims=model_param["hidden_dims"],
                 z_dim=model_param["z_dim"],
                 beta=model_param["beta"],
-                constrained_output=model_param["constrained_output"]
+                constrained_output=model_param["constrained_output"],
             )
         self.model.to(self.device)
 

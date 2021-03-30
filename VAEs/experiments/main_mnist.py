@@ -14,27 +14,27 @@ torch.manual_seed(seed)
 
 # learning params
 model_param = {
-    'x_dim': 784,
-    'hidden_dims': [512],
-    'z_dim': 16,
-    'beta': 0.0,
-    'constrained_output': True
+    "x_dim": 784,
+    "hidden_dims": [512],
+    "z_dim": 16,
+    "beta": 0.0,
+    "constrained_output": True,
 }
-    
+
 param = {
-    'epochs' : 5,
-    'batch_size' : 64,
-    'lr' : 0.0001,
-    'alpha' : 0.3,
-    'print': True,
-    'save_model': True,
-    'dir': ['../models/mnist/', '../output/out_mnist/', '../input/mnist/'],
-    'path_data': '../input/mnist/',
-    'path_vae': '../models/mnist/vae',
-    'path_cvar': '../models/mnist/cvar',
-    'path_out': '../output/out_mnist/'
+    "epochs": 5,
+    "batch_size": 64,
+    "lr": 0.0001,
+    "alpha": 0.3,
+    "print": True,
+    "save_model": True,
+    "dir": ["../models/mnist/", "../output/out_mnist/", "../input/mnist/"],
+    "path_data": "../input/mnist/",
+    "path_vae": "../models/mnist/vae",
+    "path_cvar": "../models/mnist/cvar",
+    "path_out": "../output/out_mnist/",
 }
-criterion = torch.nn.BCELoss(reduction='none')
+criterion = torch.nn.BCELoss(reduction="none")
 
 # Create directories for the output if they do not exist
 for cur_dir in param["dir"]:
@@ -43,22 +43,14 @@ for cur_dir in param["dir"]:
 
 # Generate data
 train_set = datasets.MNIST(
-    root=param['path_data'],
-    train=True,
-    download=True,
-    transform=transforms.ToTensor()
+    root=param["path_data"], train=True, download=True, transform=transforms.ToTensor()
 )
 valid_set = datasets.MNIST(
-    root=param['path_data'],
-    train=False,
-    download=True,
-    transform=transforms.ToTensor()
+    root=param["path_data"], train=False, download=True, transform=transforms.ToTensor()
 )
 
-train_loader_vae = DataLoader(
-    train_set, batch_size = param['batch_size'], shuffle=True)
-val_loader = DataLoader(
-    valid_set, batch_size = param['batch_size'], shuffle=True)
+train_loader_vae = DataLoader(train_set, batch_size=param["batch_size"], shuffle=True)
+val_loader = DataLoader(valid_set, batch_size=param["batch_size"], shuffle=True)
 
 vae = VAEalg(
     param["path_vae"],
