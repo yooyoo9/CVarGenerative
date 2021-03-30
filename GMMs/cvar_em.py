@@ -30,7 +30,7 @@ class CVaR_EM:
     fit_predict: Fit the data using the CVaR_EM algorithm and predicts otuput.
     """
 
-    def __init__(self, n_components, epochs, num_actions, size, eta, gamma=0.0):
+    def __init__(self, n_components, epochs, n_init, num_actions, size, eta, gamma=0.0):
         self.num_actions = num_actions
         self.size = size
         self.gm = GaussianMixture(
@@ -38,7 +38,7 @@ class CVaR_EM:
             covariance_type="full",
             tol=1e-3,
             max_iter=100,
-            n_init=10,  # increase
+            n_init=n_init,
             init_params="kmeans",  # kmeans or random
         )
         self.epochs = epochs
@@ -56,18 +56,12 @@ class CVaR_EM:
 
     def fit_predict(self, X):
         idx = np.zeros(self.size)
-        last = np.ones(self.size)
-        cnt = 0
         for i in range(self.epochs):
-            cnt += 1
-            last = idx
             idx = np.sort(self.sample())
             curX = X[idx]
             self.gm.fit(curX)
             # negative log likelihood of the Gaussian mixture given X
             loss = np.clip((-self.gm.score_samples(curX) / 20 + 1) / 2, 0, 1)
-
-            weights = 1.0
             prob = self._exp3.probabilities
             self._exp3.update(loss, idx, prob)
             self._exp3.normalize()

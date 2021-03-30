@@ -12,12 +12,13 @@ np.random.seed(31415)
 
 param = {
     "alpha": 0.3,
-    "epochs": 10,
+    "epochs": 100,
     "n_samples": 200,
-    "n": 10,
-    "path_X": "../data_X.npy",
-    "path_y": "../data_y.npy",
-    "path_out": "../output/",
+    "n_initialization": 20,
+    "n": 100,
+    "path_X": "data/X_aniso.npy",
+    "path_y": "data/y_aniso.npy",
+    "path_out": "output/",
 }
 
 
@@ -40,8 +41,16 @@ def generate(n, n_samples, pathX, pathy):
     Y = np.empty((n, n_samples))
     for i in range(n):
         k = np.random.randint(2, 5)
-        std = 2 * np.random.rand(k)
+        sample_distr = np.zeros(k)
+        while sum(sample_distr) != n_samples:
+            sample_distr = np.random.dirichlet(np.random.rand(k), 1)[0]
+            sample_distr = np.round(n_samples * sample_distr).astype(int)
+        std = 4 * np.random.rand(k)
+        centers = 10 * np.random.rand(k, 2)
         X, y = datasets.make_blobs(n_samples=n_samples, centers=k, cluster_std=std)
+        transformation = 2 * (np.random.rand(2, 2) - 0.5)
+        X = np.dot(X, transformation)
+
         # Normalize the data
         X -= X.mean()
         X /= X.std()
@@ -68,6 +77,7 @@ for i in range(param["n"]):
     cvar = CVaR_EM(
         n_components=n_clusters,
         epochs=param["epochs"],
+        n_init=param["n_initialization"],
         num_actions=param["n_samples"],
         size=int(np.ceil(param["alpha"] * param["n_samples"])),
         eta=np.sqrt(1 / param["alpha"] * np.log(1 / param["alpha"])),
@@ -78,33 +88,26 @@ for i in range(param["n"]):
         covariance_type="full",
         tol=1e-3,
         max_iter=100,
-        n_init=10,
+        n_init=param["n_initialization"],
         init_params="kmeans",
     )
 
     cvar_y = cvar.fit_predict(curX)
     gmm_y = gmm.fit_predict(curX)
 
-    colors = np.array(
-        list(
-            islice(
-                cycle(
-                    [
-                        "#377eb8",
-                        "#ff7f00",
-                        "#4daf4a",
-                        "#f781bf",
-                        "#a65628",
-                        "#984ea3",
-                        "#999999",
-                        "#e41a1c",
-                        "#dede00",
-                    ]
-                ),
-                int(max(max(cvar_y), max(gmm_y)) + 1),
-            )
-        )
-    )
+    color_ar = [
+        "#377eb8",
+        "#ff7f00",
+        "#4daf4a",
+        "#f781bf",
+        "#a65628",
+        "#984ea3",
+        "#999999",
+        "#e41a1c",
+        "#dede00",
+    ]
+    cycle_nb = int(max(max(cvar_y), max(gmm_y)) + 1)
+    colors = np.array(list(islice(cycle(color_ar), cycle_nb)))
     # add black color for outliers (if any)
     colors = np.append(colors, ["#000000"])
 
