@@ -7,12 +7,12 @@ from torch.utils.data import DataLoader
 from adacvar.util.cvar import CVaR
 from adacvar.util.adaptive_algorithm import Exp3Sampler
 
-from vae import VAE
+from .vae import VAE
 
 
 class VAEalg:
     def __init__(
-        self, model_path, model_param, train_set, valid_set, batch_size, lr, criterion
+            self, model_path, model_param, train_set, valid_set, batch_size, lr, criterion, beta
     ):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model_path = model_path
@@ -24,7 +24,6 @@ class VAEalg:
                 x_dim=model_param["x_dim"],
                 hidden_dims=model_param["hidden_dims"],
                 z_dim=model_param["z_dim"],
-                beta=model_param["beta"],
                 constrained_output=model_param["constrained_output"],
             )
         self.model.to(self.device)
@@ -33,6 +32,18 @@ class VAEalg:
         self.val_loader = DataLoader(valid_set, batch_size)
         self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
         self.criterion = criterion
+        self.beta = beta
+
+    def loss(self, x, recons, mu, logvar):
+        """Computes the loss function."""
+
+        # Reconstruction loss
+        rec_loss = torch.sum(self.criterion(recons, x), dim=1)
+
+        # Kl-Divergence
+        kl_loss = -0.5 * torch.sum(1 + logvar - mu ** 2 - logvar.exp(), dim=1)
+        loss = rec_loss + self.beta * kl_loss
+        return torch.sum(loss)
 
     def train(self, epochs, save_model, out):
         """Trains the VAE using the training set
@@ -54,8 +65,7 @@ class VAEalg:
                 data = data.view(data.size(0), -1)
                 self.optimizer.zero_grad()
                 recons, mu, logvar = self.model(data)
-                loss = self.model.loss(data, recons, mu, logvar, self.criterion)
-                loss = loss.sum()
+                loss = self.loss(data, recons, mu, logvar)
                 running_loss += loss.item()
                 loss.backward()
                 self.optimizer.step()
@@ -63,6 +73,8 @@ class VAEalg:
             val_loss = self.evaluate()
             if out:
                 print(f"Train Loss: {train_loss:.4f}   Val Loss: {val_loss:.4f}")
+            if save_model and epoch_idx%100 == 0:
+                torch.save(self.model, self.model_path)
         if save_model:
             torch.save(self.model, self.model_path)
 
@@ -81,11 +93,49 @@ class VAEalg:
                 data = data.to(self.device)
                 data = data.view(data.size(0), -1)
                 recons, mu, logvar = self.model(data)
-                loss = self.model.loss(data, recons, mu, logvar, self.criterion)
-                loss = loss.sum()
+                loss = self.loss(data, recons, mu, logvar)
                 running_loss += loss.item()
             val_loss = running_loss / len(self.val_loader.dataset)
         return val_loss
+
+class RockarfellarAlg(VAEalg):
+    def __init__(
+        self,
+        model_path,
+        model_param,
+        train_set,
+        valid_set,
+        batch_size,
+        lr,
+        criterion,
+        alpha,
+        beta
+    ):
+        super().__init__(
+            model_path, model_param, train_set, valid_set, batch_size, lr, criterion, beta
+        )
+
+        self.alpha = alpha
+        self.l = torch.zeros(1, requires_grad=True, device=self.device)
+        self.optimizer = optim.Adam([
+            {'params': self.model.parameters()},
+            {'params': self.l}
+        ], lr=lr)
+
+    def loss(self, x, recons, mu, logvar):
+        """Computes the loss function."""
+
+        # Reconstruction loss
+        rec_loss = torch.sum(self.criterion(recons, x), dim=1)
+
+        # Kl-Divergence
+        kl_loss = -0.5 * torch.sum(1 + logvar - mu ** 2 - logvar.exp(), dim=1)
+        loss = rec_loss + self.beta * kl_loss
+
+        N = len(loss)
+        loss = torch.maximum(loss - self.l[0], torch.zeros(N).to(self.device))
+        loss = self.l[0] + torch.sum(loss) / (self.alpha * N)
+        return loss
 
 
 class CVaRalg(VAEalg):
@@ -99,9 +149,10 @@ class CVaRalg(VAEalg):
         lr,
         criterion,
         alpha,
+        beta,
     ):
         super().__init__(
-            model_path, model_param, train_set, valid_set, batch_size, lr, criterion
+            model_path, model_param, train_set, valid_set, batch_size, lr, criterion, beta
         )
 
         self.exp3 = Exp3Sampler(
@@ -117,6 +168,17 @@ class CVaRalg(VAEalg):
         self.train_loader = DataLoader(train_set, batch_sampler=self.exp3)
         self.cvar = CVaR(alpha=1, learning_rate=0).to(self.device)
         self.k = int(np.ceil(alpha * len(self.val_loader.dataset)))
+
+    def loss(self, x, recons, mu, logvar):
+        """Computes the loss function."""
+
+        # Reconstruction loss
+        rec_loss = torch.sum(self.criterion(recons, x), dim=1)
+
+        # Kl-Divergence
+        kl_loss = -0.5 * torch.sum(1 + logvar - mu ** 2 - logvar.exp(), dim=1)
+        loss = rec_loss + self.beta * kl_loss
+        return loss
 
     def train(self, epochs, save_model, out):
         """Trains the CVaR VAE using the training set
@@ -140,7 +202,7 @@ class CVaRalg(VAEalg):
                 self.cvar.zero_grad()
 
                 recons, mu, logvar = self.model(data)
-                loss = self.model.loss(data, recons, mu, logvar, self.criterion)
+                loss = self.loss(data, recons, mu, logvar)
 
                 weights = 1.0
                 prob = self.exp3.probabilities
@@ -164,6 +226,8 @@ class CVaRalg(VAEalg):
             val_loss = self.evaluate()
             if out:
                 print(f"Train Loss: {train_loss:.4f}   Val Loss: {val_loss:.4f}")
+            if save_model and epoch_idx%100 == 0:
+                torch.save(self.model, self.model_path)
         if save_model:
             torch.save(self.model, self.model_path)
 
@@ -185,7 +249,7 @@ class CVaRalg(VAEalg):
                 data = data.to(self.device)
                 data = data.view(data.size(0), -1)
                 recons, mu, logvar = self.model(data)
-                losses = self.model.loss(data, recons, mu, logvar, self.criterion).sort(
+                losses = self.loss(data, recons, mu, logvar).sort(
                     descending=True
                 )[0]
                 if top_k is None:

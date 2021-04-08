@@ -4,7 +4,7 @@ import numpy as np
 
 
 class VAE(nn.Module):
-    def __init__(self, x_dim, hidden_dims, z_dim, beta=0, constrained_output=False):
+    def __init__(self, x_dim, hidden_dims, z_dim, constrained_output=False):
         super().__init__()
         self.z_dim = z_dim
 
@@ -29,19 +29,18 @@ class VAE(nn.Module):
         if constrained_output:
             modules.append(nn.Sigmoid())
         self.decoder = nn.Sequential(*modules)
-        self.beta = beta
 
     def encode(self, x):
         """Encodes the input using the encoder network.
 
         Parameters
         ----------
-        x: Tensor
+        x: torch.tensor
             Input tensor to encoder
 
         Returns
         -------
-        mu, logvar: Tensor, Tensor
+        mu, logvar: torch.tensor, torch.tensor
             Latent variables
         """
         result = self.encoder(x)
@@ -56,12 +55,12 @@ class VAE(nn.Module):
 
         Parameters
         ----------
-        z: Tensor
+        z: torch.tensor
             Input tensor to decoder, latent variables.
 
         Returns
         -------
-        result: Tensor
+        result: torch.tensor
         """
         result = self.decoder(z)
         return result
@@ -72,14 +71,14 @@ class VAE(nn.Module):
 
         Parameters
         ----------
-        mu: Tensor
+        mu: torch.tensor
             Mean of the latent Gaussian
-        logvar: Tensor
+        logvar: torch.tensor
             Log of variance of the latent Gaussian
 
         Returns
         -------
-        samples: Tensor
+        samples: torch.tensor
             Samples from the Gaussian
         """
 
@@ -92,13 +91,22 @@ class VAE(nn.Module):
         z = self.reparameterize(mu, logvar)
         return self.decode(z), mu, logvar
 
-    def loss(self, x, recons, mu, logvar, criterion):
-        """Computes the loss function."""
+    
+    def sample(self, num_samples, device):
+        """Samples from the latent space and return the corresponding objects in the input space.
 
-        # Reconstruction loss
-        rec_loss = torch.sum(criterion(recons, x), dim=1)
+        Parameters
+        ----------
+        num_samples: int
+            Number of samples
+        device: int
+            Device to run the model
+        
+        Returns
+        -------
+        samples: torch.tensor
 
-        # Kl-Divergence
-        kl_loss = -0.5 * torch.sum(1 + logvar - mu ** 2 - logvar.exp(), dim=1)
-        loss = rec_loss + self.beta * kl_loss
-        return loss
+        """
+        latent_var = torch.randn(num_samples, self.z_dim).to(device)
+        samples = self.decode(latent_var)
+        return samples
