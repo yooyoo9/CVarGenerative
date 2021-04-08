@@ -91,7 +91,6 @@ class VAE(nn.Module):
         z = self.reparameterize(mu, logvar)
         return self.decode(z), mu, logvar
 
-    
     def sample(self, num_samples, device):
         """Samples from the latent space and return the corresponding objects in the input space.
 
@@ -101,7 +100,7 @@ class VAE(nn.Module):
             Number of samples
         device: int
             Device to run the model
-        
+
         Returns
         -------
         samples: torch.tensor

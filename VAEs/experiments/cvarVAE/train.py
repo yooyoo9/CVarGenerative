@@ -12,7 +12,15 @@ from .vae import VAE
 
 class VAEalg:
     def __init__(
-            self, model_path, model_param, train_set, valid_set, batch_size, lr, criterion, beta
+        self,
+        model_path,
+        model_param,
+        train_set,
+        valid_set,
+        batch_size,
+        lr,
+        criterion,
+        beta,
     ):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model_path = model_path
@@ -73,7 +81,7 @@ class VAEalg:
             val_loss = self.evaluate()
             if out:
                 print(f"Train Loss: {train_loss:.4f}   Val Loss: {val_loss:.4f}")
-            if save_model and epoch_idx%100 == 0:
+            if save_model and epoch_idx % 100 == 0:
                 torch.save(self.model, self.model_path)
         if save_model:
             torch.save(self.model, self.model_path)
@@ -98,6 +106,7 @@ class VAEalg:
             val_loss = running_loss / len(self.val_loader.dataset)
         return val_loss
 
+
 class RockarfellarAlg(VAEalg):
     def __init__(
         self,
@@ -109,18 +118,24 @@ class RockarfellarAlg(VAEalg):
         lr,
         criterion,
         alpha,
-        beta
+        beta,
     ):
         super().__init__(
-            model_path, model_param, train_set, valid_set, batch_size, lr, criterion, beta
+            model_path,
+            model_param,
+            train_set,
+            valid_set,
+            batch_size,
+            lr,
+            criterion,
+            beta,
         )
 
         self.alpha = alpha
         self.l = torch.zeros(1, requires_grad=True, device=self.device)
-        self.optimizer = optim.Adam([
-            {'params': self.model.parameters()},
-            {'params': self.l}
-        ], lr=lr)
+        self.optimizer = optim.Adam(
+            [{"params": self.model.parameters()}, {"params": self.l}], lr=lr
+        )
 
     def loss(self, x, recons, mu, logvar):
         """Computes the loss function."""
@@ -152,7 +167,14 @@ class CVaRalg(VAEalg):
         beta,
     ):
         super().__init__(
-            model_path, model_param, train_set, valid_set, batch_size, lr, criterion, beta
+            model_path,
+            model_param,
+            train_set,
+            valid_set,
+            batch_size,
+            lr,
+            criterion,
+            beta,
         )
 
         self.exp3 = Exp3Sampler(
@@ -226,7 +248,7 @@ class CVaRalg(VAEalg):
             val_loss = self.evaluate()
             if out:
                 print(f"Train Loss: {train_loss:.4f}   Val Loss: {val_loss:.4f}")
-            if save_model and epoch_idx%100 == 0:
+            if save_model and epoch_idx % 100 == 0:
                 torch.save(self.model, self.model_path)
         if save_model:
             torch.save(self.model, self.model_path)
@@ -249,9 +271,7 @@ class CVaRalg(VAEalg):
                 data = data.to(self.device)
                 data = data.view(data.size(0), -1)
                 recons, mu, logvar = self.model(data)
-                losses = self.loss(data, recons, mu, logvar).sort(
-                    descending=True
-                )[0]
+                losses = self.loss(data, recons, mu, logvar).sort(descending=True)[0]
                 if top_k is None:
                     top_k = losses[: self.k]
                 else:
