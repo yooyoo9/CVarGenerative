@@ -26,7 +26,7 @@ class VAEalg:
         self.model_path = model_path
 
         if os.path.exists(model_path):
-            self.model = torch.load(model_path)
+            self.model = torch.load(model_path, map_location=torch.device("cpu"))
         else:
             self.model = VAE(
                 x_dim=model_param["x_dim"],
@@ -132,7 +132,7 @@ class RockarfellarAlg(VAEalg):
         )
 
         self.alpha = alpha
-        self.l = torch.zeros(1, requires_grad=True, device=self.device)
+        self.l = torch.ones(1, requires_grad=True, device=self.device)
         self.optimizer = optim.Adam(
             [{"params": self.model.parameters()}, {"params": self.l}], lr=lr
         )
@@ -148,8 +148,8 @@ class RockarfellarAlg(VAEalg):
         loss = rec_loss + self.beta * kl_loss
 
         N = len(loss)
-        loss = torch.maximum(loss - self.l[0], torch.zeros(N).to(self.device))
-        loss = self.l[0] + torch.sum(loss) / (self.alpha * N)
+        loss = torch.nn.ReLU()(loss - self.l)
+        loss = self.l + torch.sum(loss) / (self.alpha * N)
         return loss
 
 

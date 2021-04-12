@@ -39,23 +39,23 @@ class GaussianDataSet(Dataset):
 # learning params
 model_param = {
     "x_dim": 2,
-    "hidden_dims": [100, 100],
-    "z_dim": 4,
+    "hidden_dims": [20, 20],
+    "z_dim": 16,
     "constrained_output": False,
 }
 
 param = {
-    "epochs": 100,
+    "epochs": 200,
     "batch_size": 200,
     "lr": 1e-4,
     "alpha": 0.3,
     "beta": 0.0,
-    "print": False,
+    "print": True,
     "save_model": True,
-    "nb": 50,  # number of datasets
-    "data_size": 1000,
+    "nb": 1,  # number of datasets
+    "data_size": 2000,
     "dir": ["../models/gaussian/", "../output/out_gaussian/", "../input/gaussian/"],
-    "path_data": "../input/gaussian/data.npy",
+    "path_data": "../input/gaussian/one_gaussian.npy",
     "path_vae": "../models/gaussian/vae",
     "path_cvar": "../models/gaussian/cvar",
     "path_out": "../output/out_gaussian/",
@@ -70,18 +70,14 @@ for cur_dir in param["dir"]:
 
 # Generate data
 if not os.path.isfile(param["path_data"]):
-    X = np.empty((param["nb"], param["data_size"], 2))
-    for i in range(param["nb"]):
-        k = np.random.randint(2, 5)
-        sample_distr = np.zeros(k)
-        while sum(sample_distr) != param["data_size"]:
-            sample_distr = np.random.dirichlet(np.random.rand(k), 1)[0]
-            sample_distr = np.round(param["data_size"] * sample_distr).astype(int)
-        std = 3 * np.random.rand(k)
-        centers = 10 * np.random.rand(k, 2)
-        X[i], _ = datasets.make_blobs(
-            n_samples=sample_distr, centers=centers, cluster_std=std
-        )
+    X = np.empty((1, param["data_size"], 2))
+    k = 2
+    sample_distr = np.round(np.array([0.5, 0.5]) * param["data_size"]).astype(int)
+    std = np.array([0.1, 0.1])
+    centers = np.array([[-1, 0], [1, 0]])
+    X[0], _ = datasets.make_blobs(
+        n_samples=sample_distr, centers=centers, cluster_std=std
+    )
     np.save(param["path_data"], X)
 
 
@@ -129,7 +125,11 @@ for i in range(param["nb"]):
     recons = recons.cpu()
     recons_cvar = recons_cvar.cpu()
     ax1.scatter(data[:, 0], data[:, 1], s=10, color="black")
+    ax1.title.set_text("Validation data")
     ax2.scatter(recons[:, 0], recons[:, 1], s=10, color="black")
+    ax2.title.set_text("Usual VAE output")
     ax3.scatter(recons_cvar[:, 0], recons_cvar[:, 1], s=10, color="black")
+    ax3.title.set_text("Rockarfellar VAE output")
     plt.savefig(param["path_out"] + "output" + str(i) + ".png")
+    plt.show()
     plt.clf()
