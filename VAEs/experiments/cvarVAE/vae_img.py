@@ -2,28 +2,81 @@ import torch
 from torch import nn
 
 
-class VAE(nn.Module):
-    def __init__(self, x_dim, hidden_dims, z_dim, constrained_output=False):
+class VAEimg(nn.Module):
+    def __init__(
+        self,
+        x_dim,
+        hidden_dims,
+        z_dim,
+        kernel_size=3,
+        stride=2,
+        padding=1,
+        output_padding=1,
+        constrained_output=False,
+    ):
         super().__init__()
         self.z_dim = z_dim
+        self.last_dim = hidden_dims[-1]
 
         # Encoder
         modules = []
         cur = x_dim
         for h_dim in hidden_dims:
-            modules.append(nn.Sequential(nn.Linear(cur, h_dim), nn.ReLU()))
+            modules.append(
+                nn.Sequential(
+                    nn.Conv2d(
+                        cur,
+                        h_dim,
+                        kernel_size=kernel_size,
+                        stride=stride,
+                        padding=padding,
+                    ),
+                    nn.BatchNorm2d(h_dim),
+                    nn.ReLU(),
+                )
+            )
             cur = h_dim
-        modules.append(nn.Linear(cur, 2 * z_dim))
         self.encoder = nn.Sequential(*modules)
+        self.encoder_output = nn.Linear(hidden_dims[-1] * 4, 2 * z_dim)
 
         # Decoder
         modules = []
-        cur = z_dim
+        self.decoder_input = nn.Linear(z_dim, hidden_dims[-1] * 4)
         hidden_dims.reverse()
-        for h_dim in hidden_dims:
-            modules.append(nn.Sequential(nn.Linear(cur, h_dim), nn.ReLU()))
+        cur = hidden_dims[0]
+        for h_dim in hidden_dims[1:]:
+            modules.append(
+                nn.Sequential(
+                    nn.ConvTranspose2d(
+                        cur,
+                        h_dim,
+                        kernel_size=kernel_size,
+                        stride=stride,
+                        padding=padding,
+                    ),
+                    nn.BatchNorm2d(h_dim),
+                    nn.ReLU(),
+                )
+            )
             cur = h_dim
-        modules.append(nn.Sequential(nn.Linear(cur, x_dim)))
+
+        modules.append(
+            nn.Sequential(
+                nn.ConvTranspose2d(
+                    cur,
+                    cur,
+                    kernel_size=kernel_size,
+                    stride=stride,
+                    padding=padding,
+                    output_padding=output_padding,
+                ),
+                nn.BatchNorm2d(cur),
+                nn.ReLU(),
+                nn.Conv2d(
+                    cur, out_channels=3, kernel_size=kernel_size, padding=padding
+                ),
+            )
+        )
 
         if constrained_output:
             modules.append(nn.Sigmoid())
@@ -43,6 +96,7 @@ class VAE(nn.Module):
             Latent variables
         """
         result = self.encoder(x)
+        result = torch.flatten(result, start_dim=1)
         result = result.view(-1, 2, self.z_dim)
 
         mu = result[:, 0]
@@ -61,7 +115,9 @@ class VAE(nn.Module):
         -------
         result: torch.tensor
         """
-        result = self.decoder(z)
+        result = self.decoder_input(z)
+        result = result.view(-1, self.last_dim, 2, 2)
+        result = self.decoder(result)
         return result
 
     @staticmethod

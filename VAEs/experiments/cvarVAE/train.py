@@ -8,11 +8,13 @@ from adacvar.util.cvar import CVaR
 from adacvar.util.adaptive_algorithm import Exp3Sampler
 
 from .vae import VAE
+from .vae_img import VAEimg
 
 
 class VAEalg:
     def __init__(
         self,
+        model_name,
         model_path,
         model_param,
         train_set,
@@ -28,12 +30,20 @@ class VAEalg:
         if os.path.exists(model_path):
             self.model = torch.load(model_path, map_location=torch.device("cpu"))
         else:
-            self.model = VAE(
-                x_dim=model_param["x_dim"],
-                hidden_dims=model_param["hidden_dims"],
-                z_dim=model_param["z_dim"],
-                constrained_output=model_param["constrained_output"],
-            )
+            if model_name == "VAE":
+                self.model = VAE(
+                    x_dim=model_param["x_dim"],
+                    hidden_dims=model_param["hidden_dims"],
+                    z_dim=model_param["z_dim"],
+                    constrained_output=model_param["constrained_output"],
+                )
+            else:
+                self.model = VAEimg(
+                    x_dim=model_param["x_dim"],
+                    hidden_dims=model_param["hidden_dims"],
+                    z_dim=model_param["z_dim"],
+                    constrained_output=model_param["constrained_output"],
+                )
         self.model.to(self.device)
 
         self.train_loader = DataLoader(train_set, batch_size)
@@ -70,7 +80,6 @@ class VAEalg:
             running_loss = 0.0
             for batch_idx, (data, *_) in enumerate(self.train_loader):
                 data = data.to(self.device)
-                data = data.view(data.size(0), -1)
                 self.optimizer.zero_grad()
                 recons, mu, logvar = self.model(data)
                 loss = self.loss(data, recons, mu, logvar)
@@ -99,7 +108,6 @@ class VAEalg:
         with torch.no_grad():
             for (data, *_) in self.val_loader:
                 data = data.to(self.device)
-                data = data.view(data.size(0), -1)
                 recons, mu, logvar = self.model(data)
                 loss = self.loss(data, recons, mu, logvar)
                 running_loss += loss.item()
@@ -110,6 +118,7 @@ class VAEalg:
 class RockarfellarAlg(VAEalg):
     def __init__(
         self,
+        model_name,
         model_path,
         model_param,
         train_set,
@@ -121,6 +130,7 @@ class RockarfellarAlg(VAEalg):
         beta,
     ):
         super().__init__(
+            model_name,
             model_path,
             model_param,
             train_set,
@@ -156,6 +166,7 @@ class RockarfellarAlg(VAEalg):
 class CVaRalg(VAEalg):
     def __init__(
         self,
+        model_name,
         model_path,
         model_param,
         train_set,
@@ -167,6 +178,7 @@ class CVaRalg(VAEalg):
         beta,
     ):
         super().__init__(
+            model_name,
             model_path,
             model_param,
             train_set,
