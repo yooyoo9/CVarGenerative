@@ -6,6 +6,7 @@ from torch.utils.data import Dataset
 from sklearn import cluster, datasets
 
 from cvarVAE.train import VAEalg, RockarfellarAlg, CVaRalg
+from data import generate_data
 
 seed = 764003779
 np.random.seed(seed)
@@ -39,21 +40,23 @@ class GaussianDataSet(Dataset):
 # learning params
 model_param = {
     "x_dim": 2,
-    "hidden_dims": [20, 20],
+    "hidden_dims": [100, 100],
     "z_dim": 16,
     "constrained_output": False,
 }
 
 param = {
-    "epochs": 200,
+    "epochs": 1000,
     "batch_size": 200,
     "lr": 1e-4,
     "alpha": 0.3,
-    "beta": 0.0,
+    "beta_usual": 1,
+    "beta_roc": 1,
     "print": True,
+    "model_name": "VAE",
     "save_model": True,
     "nb": 1,  # number of datasets
-    "data_size": 2000,
+    "data_size": 1000,
     "dir": ["../models/gaussian/", "../output/out_gaussian/", "../input/gaussian/"],
     "path_data": "../input/gaussian/one_gaussian.npy",
     "path_vae": "../models/gaussian/vae",
@@ -70,16 +73,7 @@ for cur_dir in param["dir"]:
 
 # Generate data
 if not os.path.isfile(param["path_data"]):
-    X = np.empty((1, param["data_size"], 2))
-    k = 2
-    sample_distr = np.round(np.array([0.5, 0.5]) * param["data_size"]).astype(int)
-    std = np.array([0.1, 0.1])
-    centers = np.array([[-1, 0], [1, 0]])
-    X[0], _ = datasets.make_blobs(
-        n_samples=sample_distr, centers=centers, cluster_std=std
-    )
-    np.save(param["path_data"], X)
-
+    generate_data(param["data_size"], param["path_data"])
 
 fig = plt.figure(figsize=[15, 6])
 for i in range(param["nb"]):
@@ -88,6 +82,7 @@ for i in range(param["nb"]):
     valid_set = GaussianDataSet(param["path_data"], i, train=False)
 
     vae = VAEalg(
+        param["model_name"],
         param["path_vae"] + str(i),
         model_param,
         train_set,
@@ -95,11 +90,12 @@ for i in range(param["nb"]):
         param["batch_size"],
         param["lr"],
         criterion,
-        param["beta"],
+        param["beta_usual"],
     )
     vae.train(param["epochs"], param["save_model"], param["print"])
 
     cvar = RockarfellarAlg(
+        param["model_name"],
         param["path_cvar"] + str(i),
         model_param,
         train_set,
@@ -108,7 +104,7 @@ for i in range(param["nb"]):
         param["lr"],
         criterion,
         param["alpha"],
-        param["beta"],
+        param["beta_roc"],
     )
     cvar.train(param["epochs"], param["save_model"], param["print"])
 

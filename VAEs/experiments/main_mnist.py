@@ -6,7 +6,7 @@ from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
 from torchvision.utils import save_image
 
-from train import VAEalg, CVaRalg
+from cvarVAE.train import VAEalg, RockarfellarAlg, CVaRalg
 
 seed = 31415
 np.random.seed(seed)
@@ -14,7 +14,7 @@ torch.manual_seed(seed)
 
 # learning params
 model_param = {
-    "x_dim": 784,
+    "x_dim": 1,
     "hidden_dims": [512],
     "z_dim": 16,
     "beta": 0.0,
@@ -26,7 +26,9 @@ param = {
     "batch_size": 64,
     "lr": 0.0001,
     "alpha": 0.3,
+    "beta": 1.0,
     "print": True,
+    "model_name": "VAEimg",
     "save_model": True,
     "dir": ["../models/mnist/", "../output/out_mnist/", "../input/mnist/"],
     "path_data": "../input/mnist/",
@@ -53,6 +55,7 @@ train_loader_vae = DataLoader(train_set, batch_size=param["batch_size"], shuffle
 val_loader = DataLoader(valid_set, batch_size=param["batch_size"], shuffle=True)
 
 vae = VAEalg(
+    param["model_name"],
     param["path_vae"],
     model_param,
     train_set,
@@ -60,10 +63,12 @@ vae = VAEalg(
     param["batch_size"],
     param["lr"],
     criterion,
+    beta=param["beta"],
 )
 vae.train(param["epochs"], param["save_model"], param["print"])
 
-cvar = CVaRalg(
+cvar = RockarfellarAlg(
+    param["model_name"],
     param["path_cvar"],
     model_param,
     train_set,
@@ -72,6 +77,7 @@ cvar = CVaRalg(
     param["lr"],
     criterion,
     param["alpha"],
+    beta=param["beta"],
 )
 cvar.train(param["epochs"], param["save_model"], param["print"])
 
