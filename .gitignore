@@ -1,3 +1,11 @@
+__pycache__/
 *.npy
 *.idea/
-*/__pycache__/*
+*/input/*
+*/models/*
+*/unused/*
+*/weights/*
+*/loss/*
+*/cvar_loss/*
+*/output/*
+*.png
