@@ -2,29 +2,23 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 
-from sklearn import datasets
 from sklearn.mixture import GaussianMixture
 from itertools import cycle, islice
 
 from cvar_em import CVarEM
-from data import generate_data
+from generate_data import generate_data
 
 np.random.seed(31415)
 
 param = {
     "alpha": 0.3,
     "lr_hedge": 0.1,
-    "thres":0.9,
-    "conv_rate":10.0,
     "n_samples": 200,
     "n_initialization": 20,
-    "n": 1,
     "dir": ["data", "output"],
     "path_X": "data/data_X.npy",
     "path_y": "data/data_y.npy",
     "path_out": "output/",
-    "path_loss": "output/",
-    "path_weight": "output/",
 }
 
 # Create directories for the output if they do not exist
@@ -39,7 +33,7 @@ X = np.load(param["path_X"])
 y = (np.load(param["path_y"])).astype(int)
 
 fig = plt.figure(figsize=[10, 6])
-for i in range(param["n"]):
+for i in range(len(X)):
     print(i)
     curX = X[i, :-1]
     cur_y = y[i]
@@ -51,8 +45,6 @@ for i in range(param["n"]):
         num_actions=param["n_samples"],
         size=int(np.ceil(param["alpha"] * param["n_samples"])),
         lr=param["lr_hedge"],
-        conv_rate=param["conv_rate"],
-        thres=param["thres"]
     )
 
     gmm = GaussianMixture(
@@ -67,23 +59,8 @@ for i in range(param["n"]):
     cvar_y, cvar_loss, cvar_weight = cvar.fit_predict(curX)
     gmm_y = gmm.fit_predict(curX)
 
-    color_ar = [
-        "#377eb8",
-        "#ff7f00",
-        "#4daf4a",
-        "#f781bf",
-        "#a65628",
-        "#984ea3",
-        "#999999",
-        "#e41a1c",
-        "#dede00",
-    ]
-    cycle_nb = int(max(max(cvar_y), max(gmm_y)) + 1)
-    colors = np.array(list(islice(cycle(color_ar), cycle_nb)))
-    # add black color for outliers (if any)
-    colors = np.append(colors, ["#000000"])
-
     # Plot the result
+    colors = np.array(["#377eb8", "#ff7f00", "#4daf4a", "#f781bf", "#a65628"])
     ax = plt.subplot(1, 3, 1)
     ax.set_title("True distribution")
     ax.scatter(curX[:, 0], curX[:, 1], s=10, color=colors[cur_y])
@@ -97,8 +74,10 @@ for i in range(param["n"]):
     plt.clf()
 
     plt.plot(cvar_loss)
-    plt.savefig(param["path_loss"] + "data" + str(i) + "_loss.png")
+    plt.savefig(param["path_out"] + "data" + str(i) + "_loss.png")
+    plt.title("Cvar loss")
     plt.clf()
     plt.plot(cvar_weight)
-    plt.savefig(param["path_weight"] + "data" + str(i) + "_weight.png")
+    plt.savefig(param["path_out"] + "data" + str(i) + "_weight.png")
+    plt.title("Probabilities of datapoints")
     plt.clf()
