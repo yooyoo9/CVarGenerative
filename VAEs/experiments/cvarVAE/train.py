@@ -8,10 +8,10 @@ from adacvar.util.cvar import CVaR
 from adacvar.util.adaptive_algorithm import Exp3Sampler
 
 from .vae import VAE
-from .vae_img import VAEimg
+from .vae_img import VaeImg
 
 
-class VAEalg:
+class VaeAlg:
     def __init__(
         self,
         model_name,
@@ -38,11 +38,10 @@ class VAEalg:
                     constrained_output=model_param["constrained_output"],
                 )
             else:
-                self.model = VAEimg(
+                self.model = VaeImg(
                     x_dim=model_param["x_dim"],
                     hidden_dims=model_param["hidden_dims"],
                     z_dim=model_param["z_dim"],
-                    constrained_output=model_param["constrained_output"],
                 )
         self.model.to(self.device)
 
@@ -56,7 +55,9 @@ class VAEalg:
         """Computes the loss function."""
 
         # Reconstruction loss
-        rec_loss = torch.sum(self.criterion(recons, x), dim=1)
+        rec_loss = torch.sum(
+            torch.flatten(self.criterion(recons, x), start_dim=1), dim=1
+        )
 
         # Kl-Divergence
         kl_loss = -0.5 * torch.sum(1 + logvar - mu ** 2 - logvar.exp(), dim=1)
@@ -72,6 +73,8 @@ class VAEalg:
             Number of epochs to train
         save_model: bool
             If set to true, saves the model after training
+        out: bool
+            If set to true, outputs loss after each epoch
         """
         self.model.train()
         for epoch_idx in range(epochs):
@@ -115,7 +118,7 @@ class VAEalg:
         return val_loss
 
 
-class RockarfellarAlg(VAEalg):
+class Rockarfellar(VaeAlg):
     def __init__(
         self,
         model_name,
@@ -142,33 +145,35 @@ class RockarfellarAlg(VAEalg):
         )
 
         self.alpha = alpha
-        self.l = torch.ones(1, requires_grad=True, device=self.device)
+        self.roc_loss = torch.ones(1, requires_grad=True, device=self.device)
         self.optimizer = optim.Adam(
-            [{"params": self.model.parameters()}, {"params": self.l}], lr=lr
+            [{"params": self.model.parameters()}, {"params": self.roc_loss}], lr=lr
         )
 
     def loss(self, x, recons, mu, logvar):
         """Computes the loss function."""
 
         # Reconstruction loss
-        rec_loss = torch.sum(self.criterion(recons, x), dim=1)
+        rec_loss = torch.sum(
+            torch.flatten(self.criterion(recons, x), start_dim=1), dim=1
+        )
 
         # Kl-Divergence
         kl_loss = -0.5 * torch.sum(1 + logvar - mu ** 2 - logvar.exp(), dim=1)
         loss = rec_loss + self.beta * kl_loss
 
-        N = len(loss)
-        loss = torch.nn.ReLU()(loss - self.l)
-        loss = self.l + torch.sum(loss) / (self.alpha * N)
+        loss = torch.nn.ReLU()(loss - self.roc_loss)
+        loss = self.roc_loss + torch.sum(loss) / (self.alpha * len(loss))
         return loss
 
 
-class CVaRalg(VAEalg):
+class AdaCVar(VaeAlg):
     def __init__(
         self,
         model_name,
         model_path,
         model_param,
+        exp3_param,
         train_set,
         valid_set,
         batch_size,
@@ -194,10 +199,10 @@ class CVaRalg(VAEalg):
             num_actions=len(train_set),
             size=int(np.ceil(alpha * len(train_set))),
             eta=np.sqrt(1 / alpha * np.log(1 / alpha)),
-            gamma=0,
-            beta=0,
-            eps=0,
-            iid_batch=False,
+            gamma=exp3_param["gamma"],
+            beta=exp3_param["beta"],
+            eps=exp3_param["eps"],
+            iid_batch=exp3_param["iid_batch"],
         )
         self.train_loader = DataLoader(train_set, batch_sampler=self.exp3)
         self.cvar = CVaR(alpha=1, learning_rate=0).to(self.device)
@@ -207,7 +212,9 @@ class CVaRalg(VAEalg):
         """Computes the loss function."""
 
         # Reconstruction loss
-        rec_loss = torch.sum(self.criterion(recons, x), dim=1)
+        rec_loss = torch.sum(
+            torch.flatten(self.criterion(recons, x), start_dim=1), dim=1
+        )
 
         # Kl-Divergence
         kl_loss = -0.5 * torch.sum(1 + logvar - mu ** 2 - logvar.exp(), dim=1)
@@ -223,6 +230,8 @@ class CVaRalg(VAEalg):
             Number of epochs to train
         save_model: bool
             If set to true, saves the model after training
+        out: bool
+            If set to true, outputs loss after each epoch
         """
         for epoch_idx in range(epochs):
             if out:
@@ -231,7 +240,6 @@ class CVaRalg(VAEalg):
             running_loss = 0.0
             for batch_idx, (data, idx) in enumerate(self.train_loader):
                 data = data.to(self.device)
-                data = data.view(data.size(0), -1)
                 self.optimizer.zero_grad()
                 self.cvar.zero_grad()
 
@@ -248,7 +256,6 @@ class CVaRalg(VAEalg):
                     torch.tensor(weights).float().to(self.device) * self.cvar(loss)
                 ).mean()
                 running_loss += loss.sum().item()
-                loss = loss.mean()
                 cvar_loss.backward()
 
                 self.optimizer.step()
@@ -281,7 +288,6 @@ class CVaRalg(VAEalg):
             for data, _ in self.val_loader:
                 count += data.shape[0]
                 data = data.to(self.device)
-                data = data.view(data.size(0), -1)
                 recons, mu, logvar = self.model(data)
                 losses = self.loss(data, recons, mu, logvar).sort(descending=True)[0]
                 if top_k is None:
