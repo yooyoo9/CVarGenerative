@@ -4,8 +4,4 @@ __pycache__/
 */input/*
 */models/*
 */unused/*
-*/weights/*
-*/loss/*
-*/cvar_loss/*
 */output/*
-*.png
