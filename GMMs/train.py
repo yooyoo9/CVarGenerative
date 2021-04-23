@@ -3,7 +3,6 @@ import os
 import matplotlib.pyplot as plt
 
 from sklearn.mixture import GaussianMixture
-from itertools import cycle, islice
 
 from cvar_em import CVarEM
 from generate_data import generate_data
@@ -13,8 +12,9 @@ np.random.seed(31415)
 param = {
     "alpha": 0.3,
     "lr_hedge": 0.1,
-    "n_samples": 200,
-    "n_initialization": 20,
+    "n_samples": 400,
+    "n_init": 50,
+    "n_init_cvar": 50,
     "dir": ["data", "output"],
     "path_X": "data/data_X.npy",
     "path_y": "data/data_y.npy",
@@ -41,7 +41,7 @@ for i in range(len(X)):
 
     cvar = CVarEM(
         n_components=n_clusters,
-        n_init=param["n_initialization"],
+        n_init=param["n_init_cvar"],
         num_actions=param["n_samples"],
         size=int(np.ceil(param["alpha"] * param["n_samples"])),
         lr=param["lr_hedge"],
@@ -52,15 +52,27 @@ for i in range(len(X)):
         covariance_type="full",
         tol=1e-3,
         max_iter=100,
-        n_init=param["n_initialization"],
+        n_init=param["n_init"],
         init_params="kmeans",
     )
 
-    cvar_y, cvar_loss, cvar_weight = cvar.fit_predict(curX)
     gmm_y = gmm.fit_predict(curX)
+    cvar_y, cvar_loss, cvar_weight = cvar.fit_predict(curX)
 
     # Plot the result
-    colors = np.array(["#377eb8", "#ff7f00", "#4daf4a", "#f781bf", "#a65628"])
+    colors = np.array(
+        [
+            "#377eb8",
+            "#ff7f00",
+            "#4daf4a",
+            "#f781bf",
+            "#a65628",
+            "#984ea3",
+            "#999999",
+            "#e41a1c",
+            "#dede00",
+        ]
+    )
     ax = plt.subplot(1, 3, 1)
     ax.set_title("True distribution")
     ax.scatter(curX[:, 0], curX[:, 1], s=10, color=colors[cur_y])

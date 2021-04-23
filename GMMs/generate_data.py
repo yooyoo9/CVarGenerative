@@ -4,19 +4,35 @@ from sklearn import datasets
 
 def generate_data(n, path_x, path_y):
     sample_distr = [
-        np.round(np.array([0.9, 0.1]) * n).astype(int),
-        np.round(np.array([0.7, 0.05, 0.05, 0.1, 0.1]) * n).astype(int),
+        np.round(np.array([0.02, 0.98]) * n).astype(int),
+        np.round(np.array([0.78, 0.05, 0.05, 0.05, 0.05, 0.01, 0.01]) * n).astype(int),
         np.round(np.array([0.02, 0.28, 0.7]) * n).astype(int),
+        np.round(np.array([0.47, 0.47, 0.02, 0.02, 0.02]) * n).astype(int),
+        np.round(np.array([0.92, 0.02, 0.02, 0.02, 0.02]) * n).astype(int),
     ]
     std = [
-        np.array([0.15, 0.05]),
-        np.array([0.175, 0.1, 0.1, 0.1, 0.1]),
-        np.array([0.1, 0.2, 0.3]),
+        np.array([0.05, 0.7]),
+        np.array([0.08, 0.02, 0.02, 0.02, 0.02, 0.002, 0.002]),
+        np.array([0.02, 0.2, 0.2]),
+        np.array([0.5, 0.5, 0.1, 0.1, 0.1]),
+        np.array([1, 0.1, 0.2, 0.1, 0.2]),
     ]
     centers = [
-        np.array([[0, 0], [0.5, 0]]),
-        np.array([[0, 0], [-0.5, -0.5], [-0.5, 0.5], [0.5, 0.5], [0.5, -0.5]]),
-        np.array([[-1, 5.1], [-1, 4.2], [0, 5]]),
+        np.array([[0, -5], [0, -2]]),
+        np.array(
+            [
+                [0, 0],
+                [-0.3, -0.4],
+                [-0.3, 0.4],
+                [0.3, 0.4],
+                [0.3, -0.4],
+                [0, 0.7],
+                [0, -0.7],
+            ]
+        ),
+        np.array([[-1, 5.1], [-1, 4.2], [-0.2, 5]]),
+        np.array([[-2.5, 0], [2.5, 0], [0, -2], [0, 2], [0, 0]]),
+        np.array([[0, 0], [8, 2], [4, 4], [8, -2], [4, -4]]),
     ]
 
     m = len(sample_distr)

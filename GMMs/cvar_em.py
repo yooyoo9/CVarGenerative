@@ -36,7 +36,7 @@ class CVarEM:
             tol=1e-3,
             max_iter=100,
             n_init=n_init,
-            init_params="kmeans",  # kmeans or random
+            init_params="kmeans",
         )
         self.hedge = Hedge(num_actions=num_actions, size=size, eta=lr)
 
@@ -51,7 +51,7 @@ class CVarEM:
         cvar_loss = []
         prob = np.ones(len(data))
         best_idx, best_score = np.zeros(self.size), -1e8
-        while np.linalg.norm(np.sort(prob)[-self.size :] - 1.0 / self.size) > 0.04:
+        while np.linalg.norm(np.sort(prob)[-self.size :] - 1.0 / self.size) > 0.02:
             prob = self.hedge.probabilities
             prob /= np.sum(prob)
             idx = np.random.choice(
