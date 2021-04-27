@@ -11,7 +11,7 @@ class VaeImg(nn.Module):
         kernel_size=3,
         stride=2,
         padding=1,
-        output_padding=1
+        output_padding=1,
     ):
         super().__init__()
         self.z_dim = z_dim
@@ -74,7 +74,7 @@ class VaeImg(nn.Module):
             nn.BatchNorm2d(cur),
             nn.ReLU(),
             nn.Conv2d(cur, 1, kernel_size=kernel_size, padding=padding),
-            nn.Tanh(),
+            nn.Sigmoid(),
         )
 
     def encode(self, x):

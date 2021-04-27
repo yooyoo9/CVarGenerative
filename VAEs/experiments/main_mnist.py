@@ -5,6 +5,7 @@ import torch
 from torchvision import datasets, transforms
 from torch.utils.data import Dataset
 from torchvision.utils import save_image
+from sklearn.cluster import KMeans
 
 from cvarVAE.train import VaeAlg, Rockarfellar, AdaCVar
 
@@ -46,7 +47,7 @@ class ImbalancedMNIST(Dataset):
 # learning params
 model_param = {
     "x_dim": 1,
-    "hidden_dims": [128, 128],
+    "hidden_dims": [512, 512],  # TODO
     "z_dim": 16,
     "constrained_output": True,
 }
@@ -54,7 +55,8 @@ model_param = {
 exp3_param = {"gamma": 0.9, "beta": 0.0, "eps": 0.0, "iid_batch": False}
 
 param = {
-    "epochs": 1000,
+    "imbalanced": False,
+    "epochs": 10000,
     "batch_size": 256,
     "lr": 1e-4,
     "alpha": 0.3,
@@ -65,12 +67,12 @@ param = {
     "model_name_rockar": "Rockarfellar alg",
     "model_name_ada": "AdaCVar alg",
     "save_model": True,
-    "dir": ["../models/mnist/", "../output/out_mnist/", "../input/mnist/"],
+    "dir": ["../models/mnist_usual/", "../output/out_mnist_usual/", "../input/mnist/"],
     "path_data": "../input/mnist/",
-    "path_vae": "../models/mnist/vae",
-    "path_rockar": "../models/mnist/rockar",
-    "path_ada": "../models/mnist/ada",
-    "path_out": "../output/out_mnist/",
+    "path_vae": "../models/mnist_usual/vae",
+    "path_rockar": "../models/mnist_usual/rockar",
+    "path_ada": "../models/mnist_usual/ada",
+    "path_out": "../output/out_mnist_usual/",
 }
 criterion = torch.nn.MSELoss(reduction="none")
 
@@ -80,12 +82,32 @@ for cur_dir in param["dir"]:
         os.makedirs(cur_dir)
 
 # Generate data
-train_set = ImbalancedMNIST(
-    root=param["path_data"], train=True, download=True, transform=transforms.ToTensor()
-)
-valid_set = ImbalancedMNIST(
-    root=param["path_data"], train=False, download=True, transform=transforms.ToTensor()
-)
+if param["imbalanced"]:
+    train_set = ImbalancedMNIST(
+        root=param["path_data"],
+        train=True,
+        download=True,
+        transform=transforms.ToTensor(),
+    )
+    valid_set = ImbalancedMNIST(
+        root=param["path_data"],
+        train=False,
+        download=True,
+        transform=transforms.ToTensor(),
+    )
+else:
+    train_set = datasets.MNIST(
+        root=param["path_data"],
+        train=True,
+        download=True,
+        transform=transforms.ToTensor(),
+    )
+    valid_set = datasets.MNIST(
+        root=param["path_data"],
+        train=False,
+        download=True,
+        transform=transforms.ToTensor(),
+    )
 
 vae = VaeAlg(
     param["model_name"],
@@ -98,7 +120,6 @@ vae = VaeAlg(
     criterion,
     beta=param["beta"],
 )
-vae.train(param["epochs"], param["save_model"], param["print"])
 
 rockar = Rockarfellar(
     param["model_name"],
@@ -112,7 +133,6 @@ rockar = Rockarfellar(
     param["alpha"],
     beta=param["beta"],
 )
-rockar.train(param["epochs"], param["save_model"], param["print"])
 
 ada = AdaCVar(
     param["model_name"],
@@ -127,21 +147,40 @@ ada = AdaCVar(
     param["alpha"],
     param["beta"],
 )
-ada.train(param["epochs"], param["save_model"], param["print"])
 
 
-vae.model.eval()
-rockar.model.eval()
-ada.model.eval()
-with torch.no_grad():
-    recons = vae.model.sample(64, vae.device)
-    recons_rockar = rockar.model.sample(64, rockar.device)
-    recons_ada = rockar.model.sample(64, rockar.device)
+def classify(data):
+    pred = KMeans(n_clusters=10).fit_predict(data)
+    res = np.empty(data.shape)
+    cur = 0
+    for i in range(10):
+        idx = np.argwhere(pred == i)[:, 0]
+        res[cur : cur + len(idx)] = data[idx]
+        cur += len(idx)
+    return res
 
-    vae_img = recons.view(64, 1, 28, 28)
-    rockar_img = recons_rockar.view(64, 1, 28, 28)
-    ada_img = recons_ada.view(64, 1, 28, 28)
 
-    save_image(vae_img.cpu(), f"{param['path_out']}vae.png", nrow=8)
-    save_image(rockar_img.cpu(), f"{param['path_out']}rockarfellar.png", nrow=8)
-    save_image(ada_img.cpu(), f"{param['path_out']}adacvar.png", nrow=8)
+for i in range(param["epochs"] // 50):
+    vae.train(50, param["save_model"], param["print"])
+    rockar.train(50, param["save_model"], param["print"])
+    ada.train(50, param["save_model"], param["print"])
+
+    vae.model.eval()
+    rockar.model.eval()
+    ada.model.eval()
+    with torch.no_grad():
+        recons = vae.model.sample(64, vae.device).cpu().numpy()
+        recons_rockar = rockar.model.sample(64, rockar.device).cpu().numpy()
+        recons_ada = rockar.model.sample(64, rockar.device).cpu().numpy()
+
+        recons = classify(recons.reshape((64, -1)))
+        recons_rockar = classify(recons_rockar.reshape((64, -1)))
+        recons_ada = classify(recons_ada.reshape((64, -1)))
+
+        vae_img = torch.from_numpy(recons).view(64, 1, 28, 28)
+        rockar_img = torch.from_numpy(recons_rockar).view(64, 1, 28, 28)
+        ada_img = torch.from_numpy(recons_ada).view(64, 1, 28, 28)
+
+        save_image(vae_img, f"{param['path_out']}vae.png", nrow=8)
+        save_image(rockar_img, f"{param['path_out']}rockarfellar.png", nrow=8)
+        save_image(ada_img, f"{param['path_out']}adacvar.png", nrow=8)
