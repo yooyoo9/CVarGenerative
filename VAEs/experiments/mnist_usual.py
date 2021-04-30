@@ -7,7 +7,7 @@ from torch.utils.data import Dataset
 from torchvision.utils import save_image
 from sklearn.cluster import KMeans
 
-from cvarVAE.train import VaeAlg, Rockarfellar, AdaCVar
+from VAEs.experiments.util.train import VaeAlg, Rockarfellar, AdaCVar
 
 seed = 31415
 np.random.seed(seed)
@@ -47,8 +47,8 @@ class ImbalancedMNIST(Dataset):
 # learning params
 model_param = {
     "x_dim": 1,
-    "hidden_dims": [512, 512],  # TODO
-    "z_dim": 16,
+    "hidden_dims": [512, 512], # TODO
+    "z_dim": 2,
     "constrained_output": True,
 }
 
@@ -56,7 +56,7 @@ exp3_param = {"gamma": 0.9, "beta": 0.0, "eps": 0.0, "iid_batch": False}
 
 param = {
     "imbalanced": False,
-    "epochs": 10000,
+    "epochs": 1000,
     "batch_size": 256,
     "lr": 1e-4,
     "alpha": 0.3,
@@ -84,29 +84,17 @@ for cur_dir in param["dir"]:
 # Generate data
 if param["imbalanced"]:
     train_set = ImbalancedMNIST(
-        root=param["path_data"],
-        train=True,
-        download=True,
-        transform=transforms.ToTensor(),
+        root=param["path_data"], train=True, download=True, transform=transforms.ToTensor()
     )
     valid_set = ImbalancedMNIST(
-        root=param["path_data"],
-        train=False,
-        download=True,
-        transform=transforms.ToTensor(),
+        root=param["path_data"], train=False, download=True, transform=transforms.ToTensor()
     )
 else:
     train_set = datasets.MNIST(
-        root=param["path_data"],
-        train=True,
-        download=True,
-        transform=transforms.ToTensor(),
+        root=param["path_data"], train=True, download=True, transform=transforms.ToTensor()
     )
     valid_set = datasets.MNIST(
-        root=param["path_data"],
-        train=False,
-        download=True,
-        transform=transforms.ToTensor(),
+        root=param["path_data"], train=False, download=True, transform=transforms.ToTensor()
     )
 
 vae = VaeAlg(
@@ -148,23 +136,22 @@ ada = AdaCVar(
     param["beta"],
 )
 
-
 def classify(data):
-    pred = KMeans(n_clusters=10).fit_predict(data)
+    pred = KMeans(n_clusters = 10).fit_predict(data)
     res = np.empty(data.shape)
     cur = 0
     for i in range(10):
-        idx = np.argwhere(pred == i)[:, 0]
-        res[cur : cur + len(idx)] = data[idx]
+        idx = np.argwhere(pred== i)[:, 0]
+        res[cur : cur+len(idx)] = data[idx]
         cur += len(idx)
     return res
 
-
-for i in range(param["epochs"] // 50):
+for i in range(param["epochs"]//50):
     vae.train(50, param["save_model"], param["print"])
     rockar.train(50, param["save_model"], param["print"])
     ada.train(50, param["save_model"], param["print"])
 
+    
     vae.model.eval()
     rockar.model.eval()
     ada.model.eval()
