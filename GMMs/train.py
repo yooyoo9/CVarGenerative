@@ -13,7 +13,7 @@ param = {
     "alpha": 0.3,
     "lr_hedge": 0.1,
     "n_samples": 400,
-    "n_init": 50,
+    "n_init": 100,
     "n_init_cvar": 50,
     "dir": ["data", "output"],
     "path_X": "data/data_X.npy",
@@ -32,8 +32,9 @@ if not os.path.isfile(param["path_X"]):
 X = np.load(param["path_X"])
 y = (np.load(param["path_y"])).astype(int)
 
-fig = plt.figure(figsize=[10, 6])
-for i in range(len(X)):
+plt.figure(figsize=[10, 6])
+# for i in range(len(X)):
+for i in [0]:
     print(i)
     curX = X[i, :-1]
     cur_y = y[i]
@@ -45,6 +46,7 @@ for i in range(len(X)):
         num_actions=param["n_samples"],
         size=int(np.ceil(param["alpha"] * param["n_samples"])),
         lr=param["lr_hedge"],
+        path=param["path_out"],
     )
 
     gmm = GaussianMixture(
@@ -57,39 +59,4 @@ for i in range(len(X)):
     )
 
     gmm_y = gmm.fit_predict(curX)
-    cvar_y, cvar_loss, cvar_weight = cvar.fit_predict(curX)
-
-    # Plot the result
-    colors = np.array(
-        [
-            "#377eb8",
-            "#ff7f00",
-            "#4daf4a",
-            "#f781bf",
-            "#a65628",
-            "#984ea3",
-            "#999999",
-            "#e41a1c",
-            "#dede00",
-        ]
-    )
-    ax = plt.subplot(1, 3, 1)
-    ax.set_title("True distribution")
-    ax.scatter(curX[:, 0], curX[:, 1], s=10, color=colors[cur_y])
-    ax1 = plt.subplot(1, 3, 2)
-    ax1.set_title("GMM")
-    ax1.scatter(curX[:, 0], curX[:, 1], s=10, color=colors[gmm_y])
-    ax2 = plt.subplot(1, 3, 3)
-    ax2.set_title("CVaR_EM")
-    ax2.scatter(curX[:, 0], curX[:, 1], s=10, color=colors[cvar_y])
-    plt.savefig(param["path_out"] + "data" + str(i) + "_img.png")
-    plt.clf()
-
-    plt.plot(cvar_loss)
-    plt.savefig(param["path_out"] + "data" + str(i) + "_loss.png")
-    plt.title("Cvar loss")
-    plt.clf()
-    plt.plot(cvar_weight)
-    plt.savefig(param["path_out"] + "data" + str(i) + "_weight.png")
-    plt.title("Probabilities of datapoints")
-    plt.clf()
+    cvar.fit_predict(curX, cur_y, gmm_y, str(i))
