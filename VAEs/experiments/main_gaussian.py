@@ -1,10 +1,11 @@
 import numpy as np
 import os
+
 import matplotlib.pyplot as plt
 import torch
 from torch.utils.data import Dataset
 
-from cvarVAE.train import VaeAlg, Rockarfellar, AdaCVar
+from util.train import VaeAlg, Rockarfellar, AdaCVar
 from data_gaussian import generate_data
 
 seed = 764003779
@@ -54,6 +55,7 @@ param = {
     "beta_usual": 0.08,
     "beta_rockar": 0.2,
     "beta_ada": 0.08,
+    "early_stop": 50,
     "print": True,
     "model_name": "VAE",  # or VaeImg
     "model_name_usual": "VAE usual",
@@ -62,12 +64,16 @@ param = {
     "save_model": True,
     "nb": 1,  # number of datasets
     "data_size": 1000,
-    "dir": ["../models/gaussian/", "../output/out_gaussian/", "../input/gaussian/"],
-    "path_data": "../input/gaussian/one_gaussian.npy",
-    "path_vae": "../models/gaussian/vae",
-    "path_rockar": "../models/gaussian/rockar",
-    "path_ada": "../models/gaussian/ada",
-    "path_out": "../output/out_gaussian/",
+    "dir": [
+        "../../models/gaussian/",
+        "../../output/out_gaussian/",
+        "../../input/gaussian/",
+    ],
+    "path_data": "../../input/gaussian/one_gaussian.npy",
+    "path_vae": "../../models/gaussian/vae",
+    "path_rockar": "../../models/gaussian/rockar",
+    "path_ada": "../../models/gaussian/ada",
+    "path_out": "../../output/out_gaussian/",
 }
 
 criterion = torch.nn.MSELoss(reduction="none")
@@ -97,6 +103,7 @@ for i in range(param["nb"]):
         param["lr"],
         criterion,
         param["beta_usual"],
+        param["early_stop"],
     )
     vae.train(param["epochs"], param["save_model"], param["print"])
 
@@ -111,6 +118,7 @@ for i in range(param["nb"]):
         criterion,
         param["alpha"],
         param["beta_rockar"],
+        param["early_stop"],
     )
     rockar.train(param["epochs"], param["save_model"], param["print"])
 
@@ -126,6 +134,7 @@ for i in range(param["nb"]):
         criterion,
         param["alpha"],
         param["beta_ada"],
+        param["early_stop"],
     )
     ada.train(param["epochs"], param["save_model"], param["print"])
 
