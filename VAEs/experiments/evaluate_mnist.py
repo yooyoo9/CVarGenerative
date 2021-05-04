@@ -81,7 +81,8 @@ def evaluate(imbalanced):
     }
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    n = 1000
+    n_generated_images = 5000
+    n_inception = 1000
     output_file = open(param["path_out"] + "output.txt", "w")
 
     if not os.path.exists(param["path_true"]):
@@ -94,7 +95,7 @@ def evaluate(imbalanced):
             transform=transforms.ToTensor(),
         )
         true_ratio = np.zeros(10)
-        idxs = np.random.choice(len(valid_set), n, False)
+        idxs = np.random.choice(len(valid_set), n_generated_images, False)
         for i in idxs:
             save_image(valid_set[i][0], param["path_true"] + str(i) + ".png")
             true_ratio[valid_set[i][1]] += 1
@@ -122,12 +123,13 @@ def evaluate(imbalanced):
             # Generate reconstructed images
             os.makedirs(path_out_data)
             with torch.no_grad():
-                rec_data = model.sample(n, device)
-            for i in range(n):
-                save_image(rec_data[i], path_out_data + str(i) + ".png")
+                for i in range(n_generated_images//1000):
+                    rec_data = model.sample(1000, device)
+                    for j in range(1000):
+                        save_image(rec_data[j], path_out_data + str(1000*i+j) + ".png")
 
         with torch.no_grad():
-            rec_data = model.sample(n, device).cpu().numpy()
+            rec_data = model.sample(n_inception, device).cpu().numpy()
         rec_data = np.repeat(rec_data, 3, 1)
         score, _ = inception_score(
             torch.from_numpy(rec_data).type(torch.FloatTensor),
