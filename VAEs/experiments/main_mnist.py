@@ -24,12 +24,12 @@ exp3_param = {"gamma": 0.9, "beta": 0.0, "eps": 0.0, "iid_batch": False}
 
 param = {
     "imbalanced": False,
-    "epochs": 1000,
+    "epochs": 1,
     "batch_size": 256,
     "lr": 1e-4,
     "alpha": 0.3,
     "beta": 1.0,
-    "early_stop": 50,
+    "early_stop": 1000,
     "print": True,
     "model_name": "VaeImg",
     "model_name_usual": "VAE usual",
@@ -117,20 +117,20 @@ ada = AdaCVar(
     early_stop=param["early_stop"],
 )
 
-stop_vae = False
+stop_vae = True
 stop_rockar = False
-stop_ada = False
-for _ in range(param["epochs"] // 50):
+stop_ada = True
+for _ in range(param["epochs"]):
     if not stop_vae:
-        stop_vae = vae.train(50, param["save_model"], param["print"])
+        stop_vae = vae.train(200, param["save_model"], param["print"])
         generate_classes(vae.model, vae.device, out_param["path_out"] + "vae")
         plot_manifold(vae.model, vae.device, out_param["path_out"] + "vae")
     if not stop_rockar:
-        stop_rockar = rockar.train(50, param["save_model"], param["print"])
+        stop_rockar = rockar.train(100, param["save_model"], param["print"])
         generate_classes(rockar.model, rockar.device, out_param["path_out"] + "rockar")
         plot_manifold(rockar.model, rockar.device, out_param["path_out"] + "rockar")
     if not stop_ada:
-        stop_ada = ada.train(50, param["save_model"], param["print"])
+        stop_ada = ada.train(200, param["save_model"], param["print"])
         generate_classes(ada.model, ada.device, out_param["path_out"] + "ada")
         plot_manifold(ada.model, ada.device, out_param["path_out"] + "ada")
 

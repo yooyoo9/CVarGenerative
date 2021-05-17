@@ -1,6 +1,8 @@
 import numpy as np
 import os
 import torch
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 from torchvision import datasets, transforms
@@ -85,23 +87,25 @@ def evaluate(imbalanced):
     n_inception = 1000
     output_file = open(param["path_out"] + "output.txt", "w")
 
+    # Generate true images
     if not os.path.exists(param["path_true"]):
-        # Generate true images
         os.makedirs(param["path_true"])
-        valid_set = dataset(
-            root=param["path_data"],
-            train=False,
-            download=True,
-            transform=transforms.ToTensor(),
-        )
-        true_ratio = np.zeros(10)
-        idxs = np.random.choice(len(valid_set), n_generated_images, False)
-        for i in idxs:
-            save_image(valid_set[i][0], param["path_true"] + str(i) + ".png")
-            true_ratio[valid_set[i][1]] += 1
-        output_file.write("True class ratio: ")
-        np.savetxt(output_file, true_ratio, newline=" ", fmt="%4d")
-        output_file.write("\n\n")
+    valid_set = dataset(
+        root=param["path_data"],
+        train=False,
+        download=True,
+        transform=transforms.ToTensor(),
+    )
+    true_ratio = np.zeros(10)
+    idxs = np.random.choice(len(valid_set), n_generated_images, False)
+    for i in idxs:
+        save_image(valid_set[i][0], param["path_true"] + str(i) + ".png")
+        true_ratio[valid_set[i][1]] += 1.0
+    true_ratio *= n_inception / n_generated_images
+    true_ratio = (np.round(true_ratio)).astype(int)
+    output_file.write("True class ratio: ")
+    np.savetxt(output_file, true_ratio, newline=" ", fmt="%4d")
+    output_file.write("\n\n")
 
     for cur in ["vae", "rockar", "ada"]:
         output_file.write(names[cur] + "\n")
@@ -119,14 +123,14 @@ def evaluate(imbalanced):
 
         plot_manifold(model, device, path_out)
 
+        # Generate reconstructed images
         if not os.path.exists(path_out_data):
-            # Generate reconstructed images
             os.makedirs(path_out_data)
-            with torch.no_grad():
-                for i in range(n_generated_images//1000):
-                    rec_data = model.sample(1000, device)
-                    for j in range(1000):
-                        save_image(rec_data[j], path_out_data + str(1000*i+j) + ".png")
+        with torch.no_grad():
+            for i in range(n_generated_images//1000):
+                rec_data = model.sample(1000, device)
+                for j in range(1000):
+                    save_image(rec_data[j], path_out_data + str(1000*i+j) + ".png")
 
         with torch.no_grad():
             rec_data = model.sample(n_inception, device).cpu().numpy()
