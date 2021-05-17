@@ -7,6 +7,7 @@ from torch.utils.data import Dataset
 
 from util.train import VaeAlg, Rockarfellar, AdaCVar
 from data_gaussian import generate_data
+from evaluate_gaussian import evaluate_output
 
 seed = 764003779
 np.random.seed(seed)
@@ -15,7 +16,9 @@ torch.manual_seed(seed)
 
 class GaussianDataSet(Dataset):
     def __init__(self, path, idx, train):
-        input_data = np.load(path)[idx]
+        data = np.load(path)[idx]
+        input_data = data[:-1]
+        self.n_clusters = data[-1, 0]
 
         # Normalize the data
         input_data = input_data - input_data.mean(axis=0)
@@ -40,22 +43,22 @@ class GaussianDataSet(Dataset):
 # learning params
 model_param = {
     "x_dim": 2,
-    "hidden_dims": [100, 100],
+    "hidden_dims": [128, 128],
     "z_dim": 2,
     "constrained_output": False,
 }
 
-exp3_param = {"gamma": 0.9, "beta": 0.0, "eps": 0.0, "iid_batch": False}
+exp3_param = {"gamma": 0.8, "beta": 0.0, "eps": 0.0, "iid_batch": False}
 
 param = {
     "epochs": 1000,
-    "batch_size": 200,
+    "batch_size": 256,
     "lr": 1e-4,
     "alpha": 0.3,
-    "beta_usual": 0.08,
-    "beta_rockar": 0.2,
-    "beta_ada": 0.08,
-    "early_stop": 50,
+    "beta_usual": 0.5,
+    "beta_rockar": 0.5,
+    "beta_ada": 0.5,
+    "early_stop": 1000,
     "print": True,
     "model_name": "VAE",  # or VaeImg
     "model_name_usual": "VAE usual",
@@ -65,15 +68,15 @@ param = {
     "nb": 1,  # number of datasets
     "data_size": 1000,
     "dir": [
-        "../../models/gaussian/",
-        "../../output/out_gaussian/",
-        "../../input/gaussian/",
+        "../models/gaussian/",
+        "../output/out_gaussian/",
+        "../input/gaussian/",
     ],
-    "path_data": "../../input/gaussian/one_gaussian.npy",
-    "path_vae": "../../models/gaussian/vae",
-    "path_rockar": "../../models/gaussian/rockar",
-    "path_ada": "../../models/gaussian/ada",
-    "path_out": "../../output/out_gaussian/",
+    "path_data": "../input/gaussian/gaussians.npy",
+    "path_vae": "../models/gaussian/vae",
+    "path_rockar": "../models/gaussian/rockar",
+    "path_ada": "../models/gaussian/ada",
+    "path_out": "../output/out_gaussian/",
 }
 
 criterion = torch.nn.MSELoss(reduction="none")
@@ -88,7 +91,8 @@ if not os.path.isfile(param["path_data"]):
     generate_data(param["data_size"], param["path_data"])
 
 fig = plt.figure(figsize=[15, 6])
-for i in range(param["nb"]):
+# for i in range(param["nb"]):
+for i in [5]:
     print(f"Dataset {i} of {param['nb']}")
     train_set = GaussianDataSet(param["path_data"], i, train=True)
     valid_set = GaussianDataSet(param["path_data"], i, train=False)
@@ -105,7 +109,6 @@ for i in range(param["nb"]):
         param["beta_usual"],
         param["early_stop"],
     )
-    vae.train(param["epochs"], param["save_model"], param["print"])
 
     rockar = Rockarfellar(
         param["model_name"],
@@ -120,7 +123,6 @@ for i in range(param["nb"]):
         param["beta_rockar"],
         param["early_stop"],
     )
-    rockar.train(param["epochs"], param["save_model"], param["print"])
 
     ada = AdaCVar(
         param["model_name"],
@@ -136,32 +138,28 @@ for i in range(param["nb"]):
         param["beta_ada"],
         param["early_stop"],
     )
-    ada.train(param["epochs"], param["save_model"], param["print"])
 
-    # Compare usual VAE with CVaR VAE
-    vae.model.eval()
-    rockar.model.eval()
-    ada.model.eval()
-    with torch.no_grad():
-        data = valid_set.data
-        recons = vae.model.sample(data.shape[0], vae.device)
-        recons_rockar = rockar.model.sample(data.shape[0], rockar.device)
-        recons_ada = ada.model.sample(data.shape[0], ada.device)
-    ax1 = plt.subplot(141)
-    ax2 = plt.subplot(142, sharex=ax1, sharey=ax1)
-    ax3 = plt.subplot(143, sharex=ax1, sharey=ax1)
-    ax4 = plt.subplot(144, sharex=ax1, sharey=ax1)
-    recons = recons.cpu()
-    recons_rockar = recons_rockar.cpu()
-    recons_ada = recons_ada.cpu()
-    ax1.scatter(data[:, 0], data[:, 1], s=10, color="black")
-    ax1.title.set_text("Validation data")
-    ax2.scatter(recons[:, 0], recons[:, 1], s=10, color="black")
-    ax2.title.set_text(param["model_name_usual"] + " output")
-    ax3.scatter(recons_rockar[:, 0], recons_rockar[:, 1], s=10, color="black")
-    ax3.title.set_text(param["model_name_rockar"] + " output")
-    ax4.scatter(recons_ada[:, 0], recons_ada[:, 1], s=10, color="black")
-    ax4.title.set_text(param["model_name_ada"] + " output")
-    plt.savefig(param["path_out"] + "output" + str(i) + ".png")
-    plt.show()
-    plt.clf()
+    stop_vae = True
+    stop_rockar = True
+    stop_ada = False
+    # while True:
+    for _ in range(1):
+        if not stop_vae:
+            stop_vae = vae.train(400, param["save_model"], param["print"])
+        if not stop_rockar:
+            stop_rockar = rockar.train(400, param["save_model"], param["print"])
+        if not stop_ada:
+            stop_ada = ada.train(400, param["save_model"], param["print"])
+
+        evaluate_output(
+            i,
+            vae.model,
+            rockar.model,
+            ada.model,
+            vae.device,
+            param["alpha"],
+            valid_set
+        )
+
+        if stop_vae and stop_rockar and stop_ada:
+            break
