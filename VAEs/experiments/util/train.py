@@ -9,7 +9,7 @@ from adacvar.util.adaptive_algorithm import Exp3Sampler
 
 from .vae import VAE
 from .vae_img import VaeImg
-
+from .vae_celeba import VaeCeleba
 
 class VaeAlg:
     def __init__(
@@ -38,12 +38,19 @@ class VaeAlg:
                     z_dim=model_param["z_dim"],
                     constrained_output=model_param["constrained_output"],
                 )
-            else:
+            elif model_name == "VaeImg":
                 self.model = VaeImg(
                     x_dim=model_param["x_dim"],
                     hidden_dims=model_param["hidden_dims"],
                     z_dim=model_param["z_dim"],
                 )
+            else:
+                self.model = VaeCeleba(
+                    x_dim=model_param["x_dim"],
+                    hidden_dims=model_param["hidden_dims"],
+                    z_dim=model_param["z_dim"],
+                )
+                
         self.model.to(self.device)
 
         self.train_loader = DataLoader(train_set, batch_size)
