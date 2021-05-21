@@ -63,9 +63,9 @@ for i in range(len(X)):
     best, cvar_loss = cvar.fit_predict(curX)
 
     np.save(param["path_out"] + "cvar_loss" + name + ".npy", cvar_loss)
-    np.save(param["path_out"] + "prob" + name + ".npy", best['prob'])
+    np.save(param["path_out"] + "prob" + name + ".npy", best["prob"])
 
-    pred = np.array([cur_y, gmm_y, best['pred']])
+    pred = np.array([cur_y, gmm_y, best["pred"]])
     np.save(param["path_out"] + "data" + name + "_predictions.npy", pred)
 
     output_file = open(param["path_out"] + "output" + name + ".txt", "w")
@@ -74,7 +74,7 @@ for i in range(len(X)):
     output_file.write("Worst loss: {:.3f}\n".format(np.max(nll)))
     output_file.write("Average k-losses: {:.3f}\n\n".format(np.mean(np.sort(nll)[-k:])))
     output_file.write("CVaR-EM\n")
-    output_file.write("Current loss: {:.3f}\n".format(best['loss']))
-    output_file.write("Worst loss: {:.3f}\n".format(best['worst_loss']))
-    output_file.write("Average k-losses: {:.3f}\n".format(best['cvar_loss']))
+    output_file.write("Current loss: {:.3f}\n".format(best["loss"]))
+    output_file.write("Worst loss: {:.3f}\n".format(best["worst_loss"]))
+    output_file.write("Average k-losses: {:.3f}\n".format(best["cvar_loss"]))
     output_file.close()

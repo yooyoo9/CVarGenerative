@@ -70,7 +70,7 @@ class CVarEM:
         cvar_loss = []
         prob = np.ones(len(data))
         best = dict()
-        best['cvar_loss'] = -1e8
+        best["cvar_loss"] = -1e8
         while np.linalg.norm(np.sort(prob)[-self.size :] - 1.0 / self.size) > self.eps:
             prob = self.hedge.probabilities
             prob /= np.sum(prob)
@@ -86,10 +86,10 @@ class CVarEM:
             loss += [-ll.mean()]
             self.hedge.update(reward)
             self.hedge.normalize()
-            if cvar_loss[-1] > best['cvar_loss']:
-                best['loss'] = loss[-1]
-                best['worst_loss'] = np.max(-ll)
-                best['cvar_loss'] = cvar_loss[-1]
-                best['pred'] = self.gm.predict(data)
-                best['prob'] = self.hedge.probabilities
+            if cvar_loss[-1] > best["cvar_loss"]:
+                best["loss"] = loss[-1]
+                best["worst_loss"] = np.max(-ll)
+                best["cvar_loss"] = cvar_loss[-1]
+                best["pred"] = self.gm.predict(data)
+                best["prob"] = self.hedge.probabilities
         return best, loss
