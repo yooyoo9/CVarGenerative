@@ -1,5 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
 
 from sklearn.mixture import GaussianMixture
 
@@ -71,7 +70,7 @@ class CVarEM:
         prob = np.ones(len(data))
         best = dict()
         best["cvar_loss"] = -1e8
-        while np.linalg.norm(np.sort(prob)[-self.size :] - 1.0 / self.size) > self.eps:
+        while np.linalg.norm(np.sort(prob)[-self.size:] - 1.0 / self.size) > self.eps:
             prob = self.hedge.probabilities
             prob /= np.sum(prob)
             idx = np.random.choice(
