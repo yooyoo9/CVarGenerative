@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-X= np.load("data/data_X.npy")
+X = np.load("data/data_X.npy")
 colors = np.array(
     [
         "#377eb8",
@@ -18,7 +18,7 @@ colors = np.array(
 
 fsize = 16
 for i in range(5):
-    cur = np.load("output/data"+str(i)+"_predictions.npy")
+    cur = np.load("output/data" + str(i) + "_predictions.npy")
     true_y = cur[0]
     gmm_y = cur[1]
     cvar_y = cur[2]
@@ -44,5 +44,5 @@ for i in range(5):
     ax2.xaxis.set_visible(False)
     ax2.yaxis.set_visible(False)
     fig.tight_layout()
-    plt.savefig("output/data" + str(i)+ "_img.png")
+    plt.savefig("output/data" + str(i) + "_img.png")
     plt.clf()
