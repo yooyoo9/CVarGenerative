@@ -1,6 +1,5 @@
 import numpy as np
 import os
-import matplotlib.pyplot as plt
 
 from sklearn.mixture import GaussianMixture
 
@@ -15,6 +14,7 @@ param = {
     "n_samples": 400,
     "n_init": 100,
     "n_init_cvar": 50,
+    "eps": [0.017, 0.031, 0.024, 0.028, 0.025],
     "dir": ["data", "output"],
     "path_X": "data/data_X.npy",
     "path_y": "data/data_y.npy",
@@ -32,21 +32,21 @@ if not os.path.isfile(param["path_X"]):
 X = np.load(param["path_X"])
 y = (np.load(param["path_y"])).astype(int)
 
-plt.figure(figsize=[10, 6])
-# for i in range(len(X)):
-for i in [0]:
+for i in range(len(X)):
     print(i)
+    name = str(i)
     curX = X[i, :-1]
     cur_y = y[i]
     n_clusters = int(X[i, -1, 0])
 
+    k = int(np.ceil(param["alpha"] * param["n_samples"]))
     cvar = CVarEM(
         n_components=n_clusters,
         n_init=param["n_init_cvar"],
         num_actions=param["n_samples"],
-        size=int(np.ceil(param["alpha"] * param["n_samples"])),
+        size=k,
         lr=param["lr_hedge"],
-        path=param["path_out"],
+        eps=param["eps"][i],
     )
 
     gmm = GaussianMixture(
@@ -59,4 +59,22 @@ for i in [0]:
     )
 
     gmm_y = gmm.fit_predict(curX)
-    cvar.fit_predict(curX, cur_y, gmm_y, str(i))
+    nll = -gmm.score_samples(curX)
+    best, cvar_loss = cvar.fit_predict(curX)
+
+    np.save(param["path_out"] + "cvar_loss" + name + ".npy", cvar_loss)
+    np.save(param["path_out"] + "prob" + name + ".npy", best['prob'])
+
+    pred = np.array([cur_y, gmm_y, best['pred']])
+    np.save(param["path_out"] + "data" + name + "_predictions.npy", pred)
+
+    output_file = open(param["path_out"] + "output" + name + ".txt", "w")
+    output_file.write("EM-algorithm\n")
+    output_file.write("Current loss: {:.3f}\n".format(np.mean(nll)))
+    output_file.write("Worst loss: {:.3f}\n".format(np.max(nll)))
+    output_file.write("Average k-losses: {:.3f}\n\n".format(np.mean(np.sort(nll)[-k:])))
+    output_file.write("CVaR-EM\n")
+    output_file.write("Current loss: {:.3f}\n".format(best['loss']))
+    output_file.write("Worst loss: {:.3f}\n".format(best['worst_loss']))
+    output_file.write("Average k-losses: {:.3f}\n".format(best['cvar_loss']))
+    output_file.close()
