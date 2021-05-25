@@ -4,7 +4,7 @@ import torch
 
 from torchvision import datasets, transforms
 
-from util.train import VaeAlg, Rockarfellar, AdaCVar
+from util.train import VaeAlg, Rockafellar, AdaCVar
 from data_mnist import ImbalancedMNIST
 from evaluate_mnist import generate_classes, plot_manifold
 
@@ -33,7 +33,7 @@ param = {
     "print": True,
     "model_name": "VaeImg",
     "model_name_usual": "VAE usual",
-    "model_name_rockar": "Rockarfellar alg",
+    "model_name_rocka": "Rockafellar alg",
     "model_name_ada": "AdaCVar alg",
     "save_model": True,
 }
@@ -49,7 +49,7 @@ out_param = {
     ],
     "path_data": "../input/mnist/",
     "path_vae": "../models/mnist_" + name_out + "/vae",
-    "path_rockar": "../models/mnist_" + name_out + "/rockar",
+    "path_rocka": "../models/mnist_" + name_out + "/rocka",
     "path_ada": "../models/mnist_" + name_out + "/ada",
     "path_out": "../output/out_mnist_" + name_out + "/",
 }
@@ -88,9 +88,9 @@ vae = VaeAlg(
     early_stop=param["early_stop"],
 )
 
-rockar = Rockarfellar(
+rocka = Rockafellar(
     param["model_name"],
-    out_param["path_rockar"],
+    out_param["path_rocka"],
     model_param,
     train_set,
     valid_set,
@@ -118,21 +118,21 @@ ada = AdaCVar(
 )
 
 stop_vae = True
-stop_rockar = False
+stop_rocka = False
 stop_ada = True
 for _ in range(param["epochs"]):
     if not stop_vae:
         stop_vae = vae.train(200, param["save_model"], param["print"])
         generate_classes(vae.model, vae.device, out_param["path_out"] + "vae")
         plot_manifold(vae.model, vae.device, out_param["path_out"] + "vae")
-    if not stop_rockar:
-        stop_rockar = rockar.train(100, param["save_model"], param["print"])
-        generate_classes(rockar.model, rockar.device, out_param["path_out"] + "rockar")
-        plot_manifold(rockar.model, rockar.device, out_param["path_out"] + "rockar")
+    if not stop_rocka:
+        stop_rocka = rocka.train(1000, param["save_model"], param["print"])
+        generate_classes(rocka.model, rocka.device, out_param["path_out"] + "rocka")
+        plot_manifold(rocka.model, rocka.device, out_param["path_out"] + "rocka")
     if not stop_ada:
         stop_ada = ada.train(200, param["save_model"], param["print"])
         generate_classes(ada.model, ada.device, out_param["path_out"] + "ada")
         plot_manifold(ada.model, ada.device, out_param["path_out"] + "ada")
 
-    if stop_vae and stop_rockar and stop_ada:
+    if stop_vae and stop_rocka and stop_ada:
         break

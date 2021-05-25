@@ -2,7 +2,8 @@ import numpy as np
 import os
 import torch
 import matplotlib
-matplotlib.use('Agg')
+
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from torchvision import datasets, transforms
@@ -33,7 +34,7 @@ def generate_classes(model, device, path_out):
         cur = data[idx[:10]]
         if len(cur) < 10:
             cur = np.concatenate((cur, np.zeros((10 - len(cur), 1, 28, 28))))
-        recons[10 * j: 10 * (j + 1)] = cur
+        recons[10 * j : 10 * (j + 1)] = cur
     img = torch.from_numpy(recons).view(100, 1, 28, 28)
     save_image(img, path_out + ".png", nrow=10)
     return classes
@@ -55,7 +56,7 @@ def plot_manifold(model, device, path_out):
             )
             x_decoded = model.decode(z)
             digit = torch.reshape(x_decoded[0], (28, 28))
-            image[28 * i: 28 * (i + 1), 28 * j: 28 * (j + 1)] = (
+            image[28 * i : 28 * (i + 1), 28 * j : 28 * (j + 1)] = (
                 digit.detach().cpu().numpy()
             )
     plt.figure(figsize=(10, 10))
@@ -127,10 +128,10 @@ def evaluate(imbalanced):
         if not os.path.exists(path_out_data):
             os.makedirs(path_out_data)
         with torch.no_grad():
-            for i in range(n_generated_images//1000):
+            for i in range(n_generated_images // 1000):
                 rec_data = model.sample(1000, device)
                 for j in range(1000):
-                    save_image(rec_data[j], path_out_data + str(1000*i+j) + ".png")
+                    save_image(rec_data[j], path_out_data + str(1000 * i + j) + ".png")
 
         with torch.no_grad():
             rec_data = model.sample(n_inception, device).cpu().numpy()
@@ -147,5 +148,5 @@ def evaluate(imbalanced):
 
 
 if __name__ == "__main__":
-    evaluate(imbalanced=False)
+    # evaluate(imbalanced=False)
     evaluate(imbalanced=True)
