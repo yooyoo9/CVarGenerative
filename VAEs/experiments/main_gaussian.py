@@ -1,11 +1,10 @@
 import numpy as np
 import os
 
-import matplotlib.pyplot as plt
 import torch
 from torch.utils.data import Dataset
 
-from util.train import VaeAlg, Rockarfellar, AdaCVar
+from util.train import VaeAlg, Rockafellar, AdaCVar
 from data_gaussian import generate_data
 from evaluate_gaussian import evaluate_output
 
@@ -50,22 +49,20 @@ model_param = {
 
 exp3_param = {"gamma": 0.8, "beta": 0.0, "eps": 0.0, "iid_batch": False}
 
+# 0.5, (0.4, 0.5, 0.4), 0.5, 0.5, 0.5, 0.5
 param = {
-    "epochs": 1000,
+    "epochs": 100,
     "batch_size": 256,
     "lr": 1e-4,
     "alpha": 0.3,
     "beta_usual": 0.5,
-    "beta_rockar": 0.5,
+    "beta_rocka": 0.5,
     "beta_ada": 0.5,
     "early_stop": 1000,
     "print": True,
     "model_name": "VAE",  # or VaeImg
-    "model_name_usual": "VAE usual",
-    "model_name_rockar": "Rockarfellar alg",
-    "model_name_ada": "AdaCVar alg",
     "save_model": True,
-    "nb": 1,  # number of datasets
+    "nb": 5,  # number of datasets
     "data_size": 1000,
     "dir": [
         "../models/gaussian/",
@@ -74,7 +71,7 @@ param = {
     ],
     "path_data": "../input/gaussian/gaussians.npy",
     "path_vae": "../models/gaussian/vae",
-    "path_rockar": "../models/gaussian/rockar",
+    "path_rocka": "../models/gaussian/rocka",
     "path_ada": "../models/gaussian/ada",
     "path_out": "../output/out_gaussian/",
 }
@@ -90,9 +87,7 @@ for cur_dir in param["dir"]:
 if not os.path.isfile(param["path_data"]):
     generate_data(param["data_size"], param["path_data"])
 
-fig = plt.figure(figsize=[15, 6])
-# for i in range(param["nb"]):
-for i in [5]:
+for i in range(param["nb"]):
     print(f"Dataset {i} of {param['nb']}")
     train_set = GaussianDataSet(param["path_data"], i, train=True)
     valid_set = GaussianDataSet(param["path_data"], i, train=False)
@@ -110,9 +105,9 @@ for i in [5]:
         param["early_stop"],
     )
 
-    rockar = Rockarfellar(
+    rocka = Rockafellar(
         param["model_name"],
-        param["path_rockar"] + str(i),
+        param["path_rocka"] + str(i),
         model_param,
         train_set,
         valid_set,
@@ -120,7 +115,7 @@ for i in [5]:
         param["lr"],
         criterion,
         param["alpha"],
-        param["beta_rockar"],
+        param["beta_rocka"],
         param["early_stop"],
     )
 
@@ -139,27 +134,10 @@ for i in [5]:
         param["early_stop"],
     )
 
-    stop_vae = True
-    stop_rockar = True
-    stop_ada = False
-    # while True:
-    for _ in range(1):
-        if not stop_vae:
-            stop_vae = vae.train(400, param["save_model"], param["print"])
-        if not stop_rockar:
-            stop_rockar = rockar.train(400, param["save_model"], param["print"])
-        if not stop_ada:
-            stop_ada = ada.train(400, param["save_model"], param["print"])
+    vae.train(param["epochs"], param["save_model"], param["print"])
+    rocka.train(param["epochs"], param["save_model"], param["print"])
+    ada.train(param["epochs"], param["save_model"], param["print"])
 
-        evaluate_output(
-            i,
-            vae.model,
-            rockar.model,
-            ada.model,
-            vae.device,
-            param["alpha"],
-            valid_set
-        )
-
-        if stop_vae and stop_rockar and stop_ada:
-            break
+    evaluate_output(
+        i, vae.model, rocka.model, ada.model, vae.device, param["alpha"], valid_set
+    )

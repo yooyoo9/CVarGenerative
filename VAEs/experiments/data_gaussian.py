@@ -10,7 +10,7 @@ def generate_data(n, path):
         [0.92, 0.02, 0.02, 0.02, 0.02],
         [0.6, 0.1, 0.1, 0.1, 0.1],
     ]
-    
+
     std = [
         [0.01, 0.7],
         [0.02, 0.2, 0.2],
@@ -18,7 +18,7 @@ def generate_data(n, path):
         [1, 0.1, 0.2, 0.1, 0.2],
         [0.1, 0.1, 0.1, 0.1, 0.1],
     ]
-    
+
     centers = [
         [[0, -5.5], [0, -2]],
         [[-1, 5.1], [-1, 4.2], [-0.2, 5]],
@@ -28,12 +28,12 @@ def generate_data(n, path):
     ]
 
     m = len(sample_distr)
-    x = np.empty((m, n+1, 2))
+    x = np.empty((m, n + 1, 2))
     for i in range(m):
         cur_distr = np.round(np.array(sample_distr[i]) * n).astype(int)
         cur_std = np.array(std[i])
         cur_centers = np.array(centers[i])
-        
+
         x_cur, _ = datasets.make_blobs(
             n_samples=cur_distr, centers=cur_centers, cluster_std=cur_std
         )
