@@ -11,6 +11,7 @@ from .vae import VAE
 from .vae_img import VaeImg
 from .vae_celeba import VaeCeleba
 
+
 class VaeAlg:
     def __init__(
         self,
@@ -50,7 +51,7 @@ class VaeAlg:
                     hidden_dims=model_param["hidden_dims"],
                     z_dim=model_param["z_dim"],
                 )
-                
+
         self.model.to(self.device)
 
         self.train_loader = DataLoader(train_set, batch_size)
@@ -141,7 +142,7 @@ class VaeAlg:
         return val_loss
 
 
-class Rockarfellar(VaeAlg):
+class Rockafellar(VaeAlg):
     def __init__(
         self,
         model_name,
