@@ -2,13 +2,16 @@ True class ratio:  104  119  104   99   98   89   98  100   97   92
 
 Usual VAE
 Predicted class ratio:   58   65   83   74  153   69  137  106  148  107 
-Inception score: 2.28 
+Inception score: 2.28
+FID: 75.47
 
 Rockarfellar VAE
-Predicted class ratio:   77   22  102  104  130  121  100   76  197   71 
-Inception score: 2.25 
+Predicted class ratio:   82   81   93   75  121   77  141   80  142  108 
+Inception score: 2.29
+FID: 75.78
 
 AdaCVaR VAE
 Predicted class ratio:   71   88  140  100  124  103  103   87  100   84 
-Inception score: 2.34 
+Inception score: 2.34
+FID: 65.26
 
