@@ -1,0 +1,12 @@
+True class ratio:  522  595  520  496  491  444  488  500  484  460 
+
+Usual GAN
+Predicted class ratio:  159 1595  166    9  656  810  382  860    1  362 
+Inception score: 2.77
+FID: 34.05
+
+AdaCVaR GAN
+Predicted class ratio:  221 1564  107    6  627  684  382  963    0  446 
+Inception score: 2.80
+FID: 31.65
+
