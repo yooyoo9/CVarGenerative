@@ -3,13 +3,43 @@ import os
 import torch
 
 from torchvision import datasets, transforms
-from torch.utils.data import random_split
+from torch.utils.data import Dataset, random_split
+from PIL import Image
 
-from util.train import VaeAlg, Rockarfellar, AdaCVar
+from util.train import VaeAlg, Rockafellar, AdaCVar
 
 seed = 31415
 np.random.seed(seed)
 torch.manual_seed(seed)
+
+
+class CelebA(Dataset):
+    def __init__(self, path_data, split="train", image_size=64):
+        self.path_data = path_data
+
+        transform = transforms.Compose(
+            [
+                transforms.Resize(image_size),
+                transforms.CenterCrop(image_size),
+                transforms.ToTensor(),
+                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+            ]
+        )
+
+        self.dataset = datasets.CelebA(
+            root=path_data,
+            split=split,
+            download=True,
+            transform=transform,
+        )
+
+    def __getitem__(self, index):
+        data, _ = self.dataset[index]
+        return data, index
+
+    def __len__(self):
+        return len(self.dataset)
+
 
 # learning params
 model_param = {
@@ -27,12 +57,12 @@ param = {
     "lr": 1e-4,
     "alpha": 0.3,
     "beta": 1.0,
-    "early_stop": 50,
+    "early_stop": 300,
     "print": True,
     "image_size": 64,
     "model_name": "VaeCeleba",
     "model_name_usual": "VAE usual",
-    "model_name_rockar": "Rockarfellar alg",
+    "model_name_rocka": "Rockafellar alg",
     "model_name_ada": "AdaCVar alg",
     "save_model": True,
 }
@@ -45,7 +75,7 @@ out_param = {
     ],
     "path_data": "../input/celeba/",
     "path_vae": "../models/celeba/vae",
-    "path_rockar": "../models/celeba/rockar",
+    "path_rocka": "../models/celeba/rocka",
     "path_ada": "../models/celeba/ada",
     "path_out": "../output/out_celeba/",
 }
@@ -59,25 +89,8 @@ for cur_dir in out_param["dir"]:
 
 # Generate dat
 # Create the dataset
-transform = transforms.Compose([
-    transforms.Resize(param["image_size"]),
-    transforms.CenterCrop(param["image_size"]),
-    transforms.ToTensor(),
-    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-])
-
-train_set = datasets.CelebA(
-    root=out_param["path_data"],
-    split="train",
-    download=True,
-    transform=transform,
-)
-valid_set = datasets.CelebA(
-    root=out_param["path_data"],
-    split="valid",
-    download=True,
-    transform=transform,
-)
+train_set = CelebA(out_param["path_data"], "train", param["image_size"])
+valid_set = CelebA(out_param["path_data"], "valid", param["image_size"])
 
 vae = VaeAlg(
     param["model_name"],
@@ -92,9 +105,9 @@ vae = VaeAlg(
     early_stop=param["early_stop"],
 )
 
-rockar = Rockarfellar(
+rocka = Rockafellar(
     param["model_name"],
-    out_param["path_rockar"],
+    out_param["path_rocka"],
     model_param,
     train_set,
     valid_set,
@@ -121,16 +134,16 @@ ada = AdaCVar(
     early_stop=param["early_stop"],
 )
 
-stop_vae = False
-stop_rockar = False
+stop_vae = True
+stop_rocka = True
 stop_ada = False
 while True:
     if not stop_vae:
         stop_vae = vae.train(200, param["save_model"], param["print"])
-    if not stop_rockar:
-        stop_rockar = rockar.train(200, param["save_model"], param["print"])
+    if not stop_rocka:
+        stop_rocka = rocka.train(200, param["save_model"], param["print"])
     if not stop_ada:
         stop_ada = ada.train(200, param["save_model"], param["print"])
 
-    if stop_vae and stop_rockar and stop_ada:
+    if stop_vae and stop_rocka and stop_ada:
         break
