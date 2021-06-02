@@ -3,7 +3,7 @@ from torch import nn
 
 
 class VAE(nn.Module):
-    def __init__(self, x_dim, hidden_dims, z_dim, constrained_output=False):
+    def __init__(self, x_dim, hidden_dims, z_dim):
         super().__init__()
         self.z_dim = z_dim
 
@@ -23,10 +23,7 @@ class VAE(nn.Module):
         for h_dim in hidden_dims:
             modules.append(nn.Sequential(nn.Linear(cur, h_dim), nn.ReLU()))
             cur = h_dim
-        modules.append(nn.Sequential(nn.Linear(cur, x_dim)))
-
-        if constrained_output:
-            modules.append(nn.Sigmoid())
+        modules.append(nn.Linear(cur, x_dim))
         self.decoder = nn.Sequential(*modules)
 
     def encode(self, x):
