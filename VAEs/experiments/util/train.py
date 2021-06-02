@@ -9,8 +9,6 @@ from adacvar.util.adaptive_algorithm import Exp3Sampler
 
 from .vae import VAE
 from .vae_img import VaeImg
-from .vae_celeba import VaeCeleba
-
 
 class VaeAlg:
     def __init__(
@@ -24,34 +22,29 @@ class VaeAlg:
         lr,
         criterion,
         beta,
-        early_stop,
     ):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.model_path = model_path
+        if not hasattr(self, "name"):
+            self.name = "vae"
+        self.model_path = model_path + self.name
 
-        if os.path.exists(model_path):
-            self.model = torch.load(model_path, map_location=torch.device("cpu"))
+        if os.path.exists(self.model_path):
+            print('load')
+            self.model = torch.load(self.model_path, map_location=torch.device("cpu"))
         else:
             if model_name == "VAE":
                 self.model = VAE(
                     x_dim=model_param["x_dim"],
                     hidden_dims=model_param["hidden_dims"],
                     z_dim=model_param["z_dim"],
-                    constrained_output=model_param["constrained_output"],
-                )
-            elif model_name == "VaeImg":
-                self.model = VaeImg(
-                    x_dim=model_param["x_dim"],
-                    hidden_dims=model_param["hidden_dims"],
-                    z_dim=model_param["z_dim"],
                 )
             else:
-                self.model = VaeCeleba(
-                    x_dim=model_param["x_dim"],
+                self.model = VaeImg(
+                    n_channel=model_param["n_channel"],
                     hidden_dims=model_param["hidden_dims"],
                     z_dim=model_param["z_dim"],
+                    img_size=model_param["img_size"],
                 )
-
         self.model.to(self.device)
 
         self.train_loader = DataLoader(train_set, batch_size)
@@ -59,7 +52,6 @@ class VaeAlg:
         self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
         self.criterion = criterion
         self.beta = beta
-        self.early_stop = early_stop
 
     def loss(self, x, recons, mu, logvar):
         """Computes the loss function."""
@@ -87,8 +79,6 @@ class VaeAlg:
             If set to true, outputs loss after each epoch
         """
         self.model.train()
-        early_stopping = 0
-        best = 1e8
         for epoch_idx in range(epochs):
             if out:
                 print(f"Epoch {epoch_idx+1} of {epochs}")
@@ -107,20 +97,10 @@ class VaeAlg:
             if out:
                 print(f"Train Loss: {train_loss:.4f}   Val Loss: {val_loss:.4f}")
 
-            if save_model and epoch_idx % 100 == 0:
+            if save_model and epoch_idx % 50 == 0:
                 torch.save(self.model, self.model_path)
-
-            if train_loss <= best:
-                best = train_loss
-                early_stopping = 0
-            else:
-                early_stopping += 1
-            if early_stopping > self.early_stop:
-                torch.save(self.model, self.model_path)
-                return True
         if save_model:
             torch.save(self.model, self.model_path)
-        return False
 
     def evaluate(self):
         """Evaluates the VAE using the validation data.
@@ -155,8 +135,8 @@ class Rockafellar(VaeAlg):
         criterion,
         alpha,
         beta,
-        early_stop,
     ):
+        self.name = "rocka"
         super().__init__(
             model_name,
             model_path,
@@ -167,7 +147,6 @@ class Rockafellar(VaeAlg):
             lr,
             criterion,
             beta,
-            early_stop,
         )
 
         self.alpha = alpha
@@ -207,8 +186,8 @@ class AdaCVar(VaeAlg):
         criterion,
         alpha,
         beta,
-        early_stop,
     ):
+        self.name = "ada"
         super().__init__(
             model_name,
             model_path,
@@ -219,7 +198,6 @@ class AdaCVar(VaeAlg):
             lr,
             criterion,
             beta,
-            early_stop,
         )
 
         self.exp3 = Exp3Sampler(
@@ -261,8 +239,6 @@ class AdaCVar(VaeAlg):
         out: bool
             If set to true, outputs loss after each epoch
         """
-        early_stopping = 0
-        best = 1e8
         for epoch_idx in range(epochs):
             if out:
                 print(f"Epoch {epoch_idx+1} of {epochs}")
@@ -298,20 +274,10 @@ class AdaCVar(VaeAlg):
 
             if out:
                 print(f"Train Loss: {train_loss:.4f}   Val Loss: {val_loss:.4f}")
-            if save_model and epoch_idx % 100 == 0:
+            if save_model and epoch_idx % 50 == 0:
                 torch.save(self.model, self.model_path)
-
-            if train_loss <= best:
-                best = train_loss
-                early_stopping = 0
-            else:
-                early_stopping += 1
-            if early_stopping > self.early_stop:
-                torch.save(self.model, self.model_path)
-                return True
         if save_model:
             torch.save(self.model, self.model_path)
-        return False
 
     def evaluate(self):
         """Evaluates the CVaR VAE using the validation data.
