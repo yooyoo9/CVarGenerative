@@ -1,0 +1,10 @@
+Inception scores
+gan: 3.84 
+rocka: 3.73 
+ada: 3.89
+
+FID scores
+gan: 109.60
+rocka: 75.57
+ada: 67.42
+
