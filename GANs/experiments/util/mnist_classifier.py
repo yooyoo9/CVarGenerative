@@ -5,22 +5,30 @@ from torch import nn
 
 
 class MnistClassifier:
-    def __init__(self):
+    def __init__(self, model_path="../models/mnist/mnist_classifier"):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        self.model_path = "../models/mnist_usual/mnist_classifier"
+        self.model_path = model_path
         train = False
         if os.path.exists(self.model_path):
             self.model = torch.load(self.model_path, map_location=torch.device("cpu"))
         else:
             train = True
-            input_size = 784
-            hidden_sizes = [625]
+            hidden_dim = 32
             output_size = 10
             self.model = nn.Sequential(
-                nn.Linear(input_size, hidden_sizes[0]),
-                nn.ReLU(),
-                nn.Linear(hidden_sizes[0], output_size),
+                nn.Conv2d(1, hidden_dim, 4, 2, 1, bias=False),
+                nn.LeakyReLU(0.2, inplace=True),
+
+                nn.Conv2d(hidden_dim, hidden_dim*2, 4, 2, 1, bias=False),
+                nn.BatchNorm2d(hidden_dim*2),
+                nn.LeakyReLU(0.2, inplace=True),
+
+                nn.Conv2d(hidden_dim*2, hidden_dim*4, 3, 2, 1, bias=False),
+                nn.BatchNorm2d(hidden_dim*4),
+                nn.LeakyReLU(0.2, inplace=True),
+
+                nn.Conv2d(hidden_dim*4, 10, 4, 1, 0, bias=False),
                 nn.Softmax(dim=1),
             )
         self.model.to(self.device)
@@ -38,19 +46,18 @@ class MnistClassifier:
             transform=transforms.ToTensor(),
         )
         self.train_loader = torch.utils.data.DataLoader(
-            train_set, batch_size=500, shuffle=True
+            train_set, batch_size=128, shuffle=True
         )
         self.val_loader = torch.utils.data.DataLoader(
-            valid_set, batch_size=500, shuffle=True
+            valid_set, batch_size=128, shuffle=True
         )
         self.optimizer = torch.optim.SGD(
             self.model.parameters(), lr=0.05, momentum=0.9
         )
-        # self.criterion = nn.NLLLoss()
         self.criterion = nn.CrossEntropyLoss()
 
         if train:
-            self.train(100)
+            self.train(10)
             self.evaluate()
 
     def train(self, epochs):
@@ -60,9 +67,8 @@ class MnistClassifier:
             for data, labels in self.train_loader:
                 data = data.to(self.device)
                 labels = labels.to(self.device)
-                data = data.view(data.shape[0], -1)
                 self.optimizer.zero_grad()
-                log_prob = self.model(data)
+                log_prob = self.model(data).view(-1, 10)
                 loss = self.criterion(log_prob, labels)
                 loss.backward()
                 self.optimizer.step()
@@ -80,8 +86,7 @@ class MnistClassifier:
         for data, true_labels in self.val_loader:
             data = data.to(self.device)
             true_labels = true_labels.to(self.device)
-            data = data.view(data.shape[0], -1)
-            log_prob = self.model(data)
+            log_prob = self.model(data).view(-1, 10)
             pred_labels = torch.argmax(log_prob, dim=1)
             correct_count += torch.sum(pred_labels == true_labels)
             all_count += len(true_labels)
@@ -91,7 +96,9 @@ class MnistClassifier:
 
     def predict(self, data):
         data = data.to(self.device)
-        data = data.view(data.shape[0], -1)
-        log_prob = self.model(data)
+        log_prob = self.model(data).view(-1, 10)
         pred_labels = torch.argmax(log_prob, dim=1).cpu().numpy()
         return pred_labels
+
+if __name__ == "__main__":
+    MnistClassifier("../../models/mnist/mnist_classifier")
