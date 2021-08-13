@@ -3,8 +3,15 @@ from matplotlib.colors import ColorConverter
 from matplotlib import rcParams
 import numpy as np
 
+
 def plot_logger_key(
-    agents, key, title_string, save_string, y_label, get_color, get_linestyle,
+    agents,
+    key,
+    title_string,
+    save_string,
+    y_label,
+    get_color,
+    get_linestyle,
 ):
     """Plot logger keys."""
     plt.close()
@@ -23,6 +30,7 @@ def plot_logger_key(
         )
     plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left", frameon=False)
     plt.savefig(save_string, bbox_inches="tight")
+
 
 def plot_df_key(df, key, axes, get_color, get_linestyle, max_value=1, saturate=True):
     """Plot df from a key."""
@@ -47,11 +55,18 @@ def plot_df_key(df, key, axes, get_color, get_linestyle, max_value=1, saturate=T
             label = name
 
         axes.plot(
-            mean, label=label, linestyle=get_linestyle(name), color=color,
+            mean,
+            label=label,
+            linestyle=get_linestyle(name),
+            color=color,
         )
         if len(value.seed.unique()) > 1:
             axes.fill_between(
-                np.arange(len(mean)), lower, upper, color=color, alpha=0.2,
+                np.arange(len(mean)),
+                lower,
+                upper,
+                color=color,
+                alpha=0.2,
             )
 
 
@@ -159,23 +174,23 @@ def set_frame_properties(axis, color, lw):
 
 def linewidth_in_data_units(linewidth, axis, reference="y"):
     """
-    Convert a linewidth in data units to linewidth in points.
-​
-    Parameters
-    ----------
-    linewidth: float
-        Linewidth in data units of the respective reference-axis
-    axis: matplotlib axis
-        The axis which is used to extract the relevant transformation
-        data (data limits and size must not change afterwards)
-    reference: string
-        The axis that is taken as a reference for the data width.
-        Possible values: 'x' and 'y'. Defaults to 'y'.
+        Convert a linewidth in data units to linewidth in points.
+    ​
+        Parameters
+        ----------
+        linewidth: float
+            Linewidth in data units of the respective reference-axis
+        axis: matplotlib axis
+            The axis which is used to extract the relevant transformation
+            data (data limits and size must not change afterwards)
+        reference: string
+            The axis that is taken as a reference for the data width.
+            Possible values: 'x' and 'y'. Defaults to 'y'.
 
-    Returns
-    -------
-    linewidth: float
-        Linewidth in points
+        Returns
+        -------
+        linewidth: float
+            Linewidth in points
     """
     fig = axis.get_figure()
 
