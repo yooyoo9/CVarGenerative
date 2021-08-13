@@ -1,9 +1,5 @@
-import matplotlib.pyplot as plt
-import numpy as np
-
 from figure import *
 
-X = np.load("data/data_X.npy")
 colors = np.array(
     [
         "#377eb8",
@@ -18,27 +14,25 @@ colors = np.array(
     ]
 )
 
-for i in range(5):
+for i in range(10):
     cur = np.load("output/data" + str(i) + "_predictions.npy")
-    true_y = cur[0]
-    gmm_y = cur[1]
-    cvar_y = cur[2]
-    data = X[i, :-1]
+    data, true_y, gmm_y, cvar_y = cur[:, :-3], cur[:, -3], cur[:, -2], cur[:, -1]
+    true_y, gmm_y, cvar_y = true_y.astype(int), gmm_y.astype(int), cvar_y.astype(int)
 
     set_figure_params(serif=False, fontsize=9)
     fig, (ax, ax1, ax2) = plt.subplots(ncols=3, nrows=1)
     fig.set_size_inches(6.75 / 2, 2.0)
     ax.set_title("True distribution")
     ax.axis("equal")
-    ax.scatter(data[:, 0], data[:, 1], s=10, color=colors[true_y])
+    ax.scatter(data[:, 0], data[:, 1], s=1, color=colors[true_y])
     hide_all_ticks(ax)
     ax1.set_title("Usual EM")
     ax1.axis("equal")
-    ax1.scatter(data[:, 0], data[:, 1], s=10, color=colors[gmm_y])
+    ax1.scatter(data[:, 0], data[:, 1], s=1, color=colors[gmm_y])
     hide_all_ticks(ax1)
     ax2.set_title("CVaR-EM")
     ax2.axis("equal")
-    ax2.scatter(data[:, 0], data[:, 1], s=10, color=colors[cvar_y])
+    ax2.scatter(data[:, 0], data[:, 1], s=1, color=colors[cvar_y])
     hide_all_ticks(ax2)
     adapt_figure_size_from_axes((ax, ax1, ax2))
     fig.tight_layout()
