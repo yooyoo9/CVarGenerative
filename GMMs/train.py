@@ -1,52 +1,62 @@
 import numpy as np
 import os
+import argparse
+import wandb
 
 from sklearn.mixture import GaussianMixture
 
 from cvar_em import CVarEM
-from generate_data import generate_data
 
-np.random.seed(31415)
+parser = argparse.ArgumentParser()
+parser.add_argument('--dataset', type=int, default=0)
+# parser.add_argument('--alpha', type=float, default=0.3)
+# parser.add_argument('--lr_hedge', type=float, default=0.1)
+parser.add_argument('--n_init', type=int, default=100)
+parser.add_argument('--n_init_cvar', type=int, default=50)
+# parser.add_argument('--stopping_threshold', type=int, default=1)
+# "eps": [0.017, 0.031, 0.024, 0.028, 0.025]
+parser.add_argument("--seed", type=int, default=0)
+parser.add_argument('--data_source', type=str, help='path to raw data',
+                    default='data')
+parser.add_argument('--output', type=str, help='path to output',
+                    default='output')
+args = parser.parse_args()
+thres = [1000, 1000, 3000, 1000, 1000, 1000, 1000, 1000, 2000, 1000]
+lr = [0.5, 0.5, 0.01, 0.01, 0.5, 0.5, 0.5, 0.5, 0.01, 0.01]
+alphas = [0.1, 0.1, 0.3, 0.3, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
+args.stopping_threshold, args.lr_hedge, args.alpha = thres[args.dataset], lr[args.dataset], alphas[args.dataset]
+wandb.init(project='cvar-generative', entity='yooyoo9', config=args)
 
-param = {
-    "alpha": 0.3,
-    "lr_hedge": 0.1,
-    "n_samples": 400,
-    "n_init": 100,
-    "n_init_cvar": 50,
-    "eps": [0.017, 0.031, 0.024, 0.028, 0.025],
-    "dir": ["data", "output"],
-    "path_X": "data/data_X.npy",
-    "path_y": "data/data_y.npy",
-    "path_out": "output/",
-}
+np.random.seed(args.seed)
 
-# Create directories for the output if they do not exist
-for cur_dir in param["dir"]:
-    if not os.path.exists(cur_dir):
-        os.makedirs(cur_dir)
+if not os.path.exists(args.output):
+    os.makedirs(args.output)
 
-# Check if data already present, if not generate
-if not os.path.isfile(param["path_X"]):
-    generate_data(param["n_samples"], param["path_X"], param["path_y"])
-X = np.load(param["path_X"])
-y = (np.load(param["path_y"])).astype(int)
+path_X = os.path.join(args.data_source, 'X.npy')
+path_y = os.path.join(args.data_source, 'Y.npy')
+X = np.load(path_X)
+y = (np.load(path_y)).astype(int)
 
-for i in range(len(X)):
-    print(i)
+for i in [args.dataset]:
     name = str(i)
     curX = X[i, :-1]
     cur_y = y[i]
-    n_clusters = int(X[i, -1, 0])
+    idx_array = np.random.permutation(len(curX))
+    n = len(curX) // 3
+    curX, cur_y = curX[idx_array], cur_y[idx_array]
+    X_train, X_val = curX[:n], curX[n:2*n]
+    X_test, y_test = curX[2*n:], cur_y[2*n:]
 
-    k = int(np.ceil(param["alpha"] * param["n_samples"]))
+    n_clusters = int(X[i, -1, 0])
     cvar = CVarEM(
         n_components=n_clusters,
-        n_init=param["n_init_cvar"],
-        num_actions=param["n_samples"],
-        size=k,
-        lr=param["lr_hedge"],
-        eps=param["eps"][i],
+        n_init=args.n_init_cvar,
+        num_actions=n,
+        size=int(np.ceil(args.alpha * n)),
+        val_size=int(np.ceil(args.alpha * n)),
+        test_size=int(np.ceil(args.alpha * n)),
+        lr=args.lr_hedge,
+        threshold=args.stopping_threshold,
     )
 
     gmm = GaussianMixture(
@@ -54,27 +64,23 @@ for i in range(len(X)):
         covariance_type="full",
         tol=1e-3,
         max_iter=100,
-        n_init=param["n_init"],
+        n_init=args.n_init,
         init_params="kmeans",
     )
 
-    gmm_y = gmm.fit_predict(curX)
-    nll = -gmm.score_samples(curX)
-    best, cvar_loss = cvar.fit_predict(curX)
+    gmm.fit(X_train)
+    gmm_y = gmm.predict(X_test)
+    nll = -gmm.score_samples(X_test)
+    k_test = int(np.ceil(args.alpha * n))
+    wandb.log({
+        'EM current loss': np.mean(nll),
+        'EM worst loss': np.max(nll),
+        'EM cvar loss': np.mean(np.sort(nll)[-k_test:]),
+    })
 
-    np.save(param["path_out"] + "cvar_loss" + name + ".npy", cvar_loss)
-    np.save(param["path_out"] + "prob" + name + ".npy", best["prob"])
+    y_pred = cvar.fit_predict(X_train, X_val, X_test)
 
-    pred = np.array([cur_y, gmm_y, best["pred"]])
-    np.save(param["path_out"] + "data" + name + "_predictions.npy", pred)
-
-    output_file = open(param["path_out"] + "output" + name + ".txt", "w")
-    output_file.write("EM-algorithm\n")
-    output_file.write("Current loss: {:.3f}\n".format(np.mean(nll)))
-    output_file.write("Worst loss: {:.3f}\n".format(np.max(nll)))
-    output_file.write("Average k-losses: {:.3f}\n\n".format(np.mean(np.sort(nll)[-k:])))
-    output_file.write("CVaR-EM\n")
-    output_file.write("Current loss: {:.3f}\n".format(best["loss"]))
-    output_file.write("Worst loss: {:.3f}\n".format(best["worst_loss"]))
-    output_file.write("Average k-losses: {:.3f}\n".format(best["cvar_loss"]))
-    output_file.close()
+    results = np.empty((len(X_test), len(X_test[0]) + 3))
+    results[:, :-3] = X_test
+    results[:, -3], results[:, -2], results[:, -1] = y_test, gmm_y, y_pred
+    np.save(os.path.join(args.output, "data" + name + "_predictions.npy"), results)
