@@ -37,15 +37,25 @@ class CVarEM:
         Number of data points to selected by sampler.
     lr: float
         Learning rate of the Hedge algorithm.
-    eps: float
-        Stopping criterion for CVaR-EM.
+    threshold: int
+        Number of epochs for CVaR-EM.
 
     Methods
     -------
     fit_predict: Fit the data using CVaR-EM and outputs its prediction.
     """
 
-    def __init__(self, n_components, n_init, num_actions, size, val_size, test_size, lr, threshold):
+    def __init__(
+        self,
+        n_components,
+        n_init,
+        num_actions,
+        size,
+        val_size,
+        test_size,
+        lr,
+        threshold,
+    ):
         self.num_actions = num_actions
         self.size = size
         self.val_size = val_size
@@ -68,15 +78,15 @@ class CVarEM:
         ----------
         data: np.array
             Array of datapoints to be fitted.
+        val_data: np.array
+            Array of datapoints for validation.
+        test_data: np.array
+            Array of datapoints for testing.
 
         Returns
         -------
-        best: dict
-            Contains predictions of datapoints, mean NLL, worst NLL and CVaR of NLL
-        loss: np.array
-            NLL of the dataset at each round
-        cvar_loss: np.array
-            CVaR of the NLL of the data at each round
+        prediction: np.array
+            Predictions for the test data
         """
         self.gm.fit(data)
         score = self.gm.score_samples(data)
@@ -84,11 +94,10 @@ class CVarEM:
         max_clip = np.max(score)
         range_score = max_clip - min_clip
 
-        prob = np.ones(len(data))
-        best_loss = 1e8
+        best_loss, best_worst_loss, best_mean_loss = 1e8, 1e8, 1e8
+        prediction = None
         nb_iters = 0
         while nb_iters < self.threshold:
-            # np.linalg.norm(np.sort(prob)[-self.size:] - 1.0 / self.size) > self.eps:
             nb_iters += 1
             prob = self.hedge.probabilities
             prob /= np.sum(prob)
@@ -102,16 +111,18 @@ class CVarEM:
             reward = ((-nll - min_clip) / range_score).clip(0, 1)
 
             val_nll = -self.gm.score_samples(val_data)
-            val_cvar = np.mean(np.sort(val_nll)[-self.val_size:])
-            wandb.log({
-                'CVaR-EM cvar loss': val_cvar,
-                'CVaR-EM worst loss': np.max(val_nll),
-                'CVaR-EM mean loss': np.mean(val_nll)
-            })
+            val_cvar = np.mean(np.sort(val_nll)[-self.val_size :])
+            wandb.log(
+                {
+                    "CVaR-EM cvar loss": val_cvar,
+                    "CVaR-EM worst loss": np.max(val_nll),
+                    "CVaR-EM mean loss": np.mean(val_nll),
+                }
+            )
 
             if val_cvar < best_loss:
                 test_nll = -self.gm.score_samples(test_data)
-                test_cvar = np.mean(np.sort(test_nll)[-self.test_size:])
+                test_cvar = np.mean(np.sort(test_nll)[-self.test_size :])
                 best_loss = test_cvar
                 best_worst_loss = np.max(test_nll)
                 best_mean_loss = np.mean(test_nll)
@@ -119,14 +130,18 @@ class CVarEM:
 
                 fig = plt.figure()
                 plt.axis("equal")
-                plt.scatter(test_data[:, 0], test_data[:, 1], s=1, color=colors[prediction])
-                wandb.log({'prediction': wandb.Image(fig)})
+                plt.scatter(
+                    test_data[:, 0], test_data[:, 1], s=1, color=colors[prediction]
+                )
+                wandb.log({"prediction": wandb.Image(fig)})
                 plt.close()
             self.hedge.update(reward)
             self.hedge.normalize()
-        wandb.log({
-            'CVaR-EM final cvar loss': best_loss,
-            'CVaR-EM final worst loss': best_worst_loss,
-            'CVaR-EM final mean loss': best_mean_loss
-        })
+        wandb.log(
+            {
+                "CVaR-EM final cvar loss": best_loss,
+                "CVaR-EM final worst loss": best_worst_loss,
+                "CVaR-EM final mean loss": best_mean_loss,
+            }
+        )
         return prediction

@@ -2,6 +2,7 @@ import os
 import numpy as np
 import argparse
 from sklearn import datasets
+
 sample_distr = [
     [0.01, 0.99],
     [0.78, 0.05, 0.05, 0.05, 0.05, 0.01, 0.01],
@@ -34,8 +35,8 @@ centers = [
 
 
 def generate_data(n, path):
-    path_x = os.path.join(path, 'X.npy')
-    path_y = os.path.join(path, 'Y.npy')
+    path_x = os.path.join(path, "X.npy")
+    path_y = os.path.join(path, "Y.npy")
 
     m = len(sample_distr)
     data = np.empty((2 * m, n + 1, 2))
@@ -66,7 +67,9 @@ if __name__ == "__main__":
         "--n", type=int, help="number of samples per dataset", default=1200
     )
     parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument("--data_path", type=str, help="path to saved data", default="data")
+    parser.add_argument(
+        "--data_path", type=str, help="path to saved data", default="data"
+    )
     args = parser.parse_args()
 
     np.random.seed(args.seed)
