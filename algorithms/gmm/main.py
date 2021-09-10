@@ -9,37 +9,41 @@ from cvar_em import CVarEM
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--dataset", type=int, default=0)
-# parser.add_argument('--alpha', type=float, default=0.3)
-# parser.add_argument('--lr_hedge', type=float, default=0.1)
+parser.add_argument('--alpha', type=float, default=0.3)
+parser.add_argument('--lr_hedge', type=float, default=0.1)
 parser.add_argument("--n_init", type=int, default=100)
 parser.add_argument("--n_init_cvar", type=int, default=50)
-# parser.add_argument('--stopping_threshold', type=int, default=1)
-# "eps": [0.017, 0.031, 0.024, 0.028, 0.025]
+parser.add_argument('--stopping_threshold', type=int, default=1)
+parser.add_argument("--reproduce", action='store_true', default=False)
 parser.add_argument("--seed", type=int, default=0)
-parser.add_argument("--data_source", type=str, help="path to raw data", default="data")
-parser.add_argument("--output", type=str, help="path to output", default="output")
 args = parser.parse_args()
-thres = [1000, 1000, 3000, 1000, 1000, 1000, 1000, 1000, 2000, 1000]
-lr = [0.5, 0.5, 0.01, 0.01, 0.5, 0.5, 0.5, 0.5, 0.01, 0.01]
-alphas = [0.1, 0.1, 0.3, 0.3, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
-args.stopping_threshold, args.lr_hedge, args.alpha = (
-    thres[args.dataset],
-    lr[args.dataset],
-    alphas[args.dataset],
-)
-wandb.init(project="cvar-generative", entity="yooyoo9", config=args)
 
+wandb.init(project="cvar-generative", entity="yooyoo9", config=args)
 np.random.seed(args.seed)
 
-if not os.path.exists(args.output):
-    os.makedirs(args.output)
+if args.reproduce:
+    thres = [1000, 1000, 3000, 1000, 1000, 1000, 1000, 1000, 2000, 1000]
+    lr = [0.5, 0.5, 0.01, 0.01, 0.5, 0.5, 0.5, 0.5, 0.01, 0.01]
+    alphas = [0.1, 0.1, 0.3, 0.3, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
+    datasets = np.arange(10)
+else:
+    datasets = [args.dataset]
 
-path_X = os.path.join(args.data_source, "X.npy")
-path_y = os.path.join(args.data_source, "Y.npy")
+output_path = 'experiments/synthetic/gmm'
+if not os.path.exists(output_path):
+    os.makedirs(output_path)
+
+data_source = 'experiments/synthetic/input'
+path_X = os.path.join(data_source, "X1200.npy")
+path_y = os.path.join(data_source, "Y1200.npy")
 X = np.load(path_X)
 y = (np.load(path_y)).astype(int)
 
-for i in [args.dataset]:
+for i in datasets:
+    if args.reproduce:
+        args.stopping_threshold = thres[i]
+        args.lr_hedge = lr[i]
+        args.alpha = alphas[i]
     name = str(i)
     curX = X[i, :-1]
     cur_y = y[i]
@@ -47,7 +51,7 @@ for i in [args.dataset]:
     n = len(curX) // 3
     curX, cur_y = curX[idx_array], cur_y[idx_array]
     X_train, X_val = curX[:n], curX[n : 2 * n]
-    X_test, y_test = curX[2 * n :], cur_y[2 * n :]
+    X_test, y_test = curX[2 * n:], cur_y[2 * n:]
 
     n_clusters = int(X[i, -1, 0])
     cvar = CVarEM(
@@ -87,4 +91,4 @@ for i in [args.dataset]:
     results = np.empty((len(X_test), len(X_test[0]) + 3))
     results[:, :-3] = X_test
     results[:, -3], results[:, -2], results[:, -1] = y_test, gmm_y, y_pred
-    np.save(os.path.join(args.output, "data" + name + "_predictions.npy"), results)
+    np.save(os.path.join(output_path, "data" + name + "_predictions.npy"), results)
