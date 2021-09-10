@@ -23,7 +23,8 @@ class VAE(nn.Module):
         for h_dim in hidden_dims:
             modules.append(nn.Sequential(nn.Linear(cur, h_dim), nn.ReLU()))
             cur = h_dim
-        modules.append(nn.Linear(cur, x_dim))
+        modules.append(nn.Sequential(nn.Linear(cur, x_dim)))
+
         self.decoder = nn.Sequential(*modules)
 
     def encode(self, x):
