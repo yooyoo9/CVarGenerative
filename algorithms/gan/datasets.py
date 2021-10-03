@@ -12,7 +12,7 @@ class Datasets(Dataset):
                 transforms.Resize(img_size),
                 transforms.CenterCrop(img_size),
                 transforms.ToTensor(),
-                transforms.Normalize(mean, std)
+                transforms.Normalize(mean, std),
             ]
         )
         self.dataset = None
@@ -130,11 +130,11 @@ class CelebA(Datasets):
         super().__init__(img_size, mean, std)
 
         if train == 0:
-            split = 'train'
+            split = "train"
         elif train == 1:
-            split = 'valid'
+            split = "valid"
         else:
-            split = 'test'
+            split = "test"
 
         self.dataset = datasets.CelebA(
             root=root,

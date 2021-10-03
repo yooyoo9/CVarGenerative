@@ -14,7 +14,7 @@ class VaeImg(nn.Module):
         self.z_dim = z_dim
         self.last_dim = hidden_dims[-1]
         self.img_size = img_size
-        self.nb = img_size // (2**len(hidden_dims))
+        self.nb = img_size // (2 ** len(hidden_dims))
 
         # Encoder
         modules = []

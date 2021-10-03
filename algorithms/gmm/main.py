@@ -9,12 +9,12 @@ from cvar_em import CVarEM
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--dataset", type=int, default=0)
-parser.add_argument('--alpha', type=float, default=0.3)
-parser.add_argument('--lr_hedge', type=float, default=0.1)
+parser.add_argument("--alpha", type=float, default=0.3)
+parser.add_argument("--lr_hedge", type=float, default=0.1)
 parser.add_argument("--n_init", type=int, default=100)
 parser.add_argument("--n_init_cvar", type=int, default=50)
-parser.add_argument('--stopping_threshold', type=int, default=1)
-parser.add_argument("--reproduce", action='store_true', default=False)
+parser.add_argument("--stopping_threshold", type=int, default=1)
+parser.add_argument("--reproduce", action="store_true", default=False)
 parser.add_argument("--seed", type=int, default=0)
 args = parser.parse_args()
 
@@ -25,15 +25,15 @@ if args.reproduce:
     thres = [1000, 1000, 3000, 1000, 1000, 1000, 1000, 1000, 2000, 1000]
     lr = [0.5, 0.5, 0.01, 0.01, 0.5, 0.5, 0.5, 0.5, 0.01, 0.01]
     alphas = [0.1, 0.1, 0.3, 0.3, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
-    datasets = [2,3]
+    datasets = [2, 3]
 else:
     datasets = [args.dataset]
 
-output_path = 'experiments/synthetic/gmm'
+output_path = "experiments/synthetic/gmm"
 if not os.path.exists(output_path):
     os.makedirs(output_path)
 
-data_source = 'experiments/synthetic/input'
+data_source = "experiments/synthetic/input"
 path_X = os.path.join(data_source, "X1200.npy")
 path_y = os.path.join(data_source, "Y1200.npy")
 X = np.load(path_X)
@@ -51,7 +51,7 @@ for i in datasets:
     n = len(curX) // 3
     curX, cur_y = curX[idx_array], cur_y[idx_array]
     X_train, X_val = curX[:n], curX[n : 2 * n]
-    X_test, y_test = curX[2 * n:], cur_y[2 * n:]
+    X_test, y_test = curX[2 * n :], cur_y[2 * n :]
 
     n_clusters = int(X[i, -1, 0])
     cvar = CVarEM(

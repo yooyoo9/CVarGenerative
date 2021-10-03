@@ -1,0 +1,5 @@
+Inception scores
+vae: 2.02 
+rocka: 2.06 
+ada: 2.07 
+

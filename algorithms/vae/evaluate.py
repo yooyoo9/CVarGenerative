@@ -27,7 +27,7 @@ def generate_reconstructions(path, true_data, nb, device, n_channel, img_size):
         for i in idxs:
             save_image(true_data[i][0], os.path.join(cur_path, str(i) + ".png"))
 
-    for cur in ['orig', 'trunc', 'ada']:
+    for cur in ["orig", "trunc", "ada"]:
         path_out_data = os.path.join(path["path_out"], "reconstructions", cur + "_data")
         if not os.path.exists(path_out_data):
             os.makedirs(path_out_data)
@@ -40,10 +40,16 @@ def generate_reconstructions(path, true_data, nb, device, n_channel, img_size):
                 os.makedirs(cur_path)
             with torch.no_grad():
                 for i in range(nb // 128):
-                    rec_data = model.sample(128, device).view(-1, n_channel, img_size, img_size)
+                    rec_data = model.sample(128, device).view(
+                        -1, n_channel, img_size, img_size
+                    )
                     rec_data = transforms.Normalize(0.5, 0.5)(rec_data)
                     for j in range(128):
-                        save_image(rec_data[j], os.path.join(cur_path, str(128 * i + j) + ".png"), normalize=True)
+                        save_image(
+                            rec_data[j],
+                            os.path.join(cur_path, str(128 * i + j) + ".png"),
+                            normalize=True,
+                        )
 
 
 def plot_manifolds(path, device):
@@ -60,10 +66,14 @@ def plot_manifolds(path, device):
         image = np.zeros((image_height, image_width))
         for i, yi in enumerate(grid_x):
             for j, xi in enumerate(grid_y):
-                z = torch.from_numpy(np.array([[xi, yi]])).type(torch.FloatTensor).to(device)
+                z = (
+                    torch.from_numpy(np.array([[xi, yi]]))
+                    .type(torch.FloatTensor)
+                    .to(device)
+                )
                 x_decoded = model.decode(z)
                 digit = torch.reshape(x_decoded[0], (28, 28))
-                image[28 * i: 28 * (i + 1), 28 * j: 28 * (j + 1)] = (
+                image[28 * i : 28 * (i + 1), 28 * j : 28 * (j + 1)] = (
                     digit.detach().cpu().numpy()
                 )
         np.save(path_out, image)
@@ -80,7 +90,8 @@ def calculate_class_ratios(path, true_data, device):
                 data, _ = next(iter(DataLoader(true_data, 1000, shuffle=True)))
             else:
                 model = torch.load(
-                    os.path.join(path["path_model"], cur), map_location=torch.device("cpu")
+                    os.path.join(path["path_model"], cur),
+                    map_location=torch.device("cpu"),
                 ).to(device)
 
                 with torch.no_grad():
@@ -114,7 +125,10 @@ def generate_samples_mnist(path, true_data, device):
         new_idx = np.argsort(pred_labels)
         recons = data[new_idx]
         img = torch.from_numpy(recons).view(100, 1, 28, 28)
-        img = np.transpose(make_grid(img.to(device), nrow=10, padding=5, normalize=True).cpu(), (1, 2, 0))
+        img = np.transpose(
+            make_grid(img.to(device), nrow=10, padding=5, normalize=True).cpu(),
+            (1, 2, 0),
+        )
         np.save(path_out, img)
 
 
@@ -163,14 +177,17 @@ def calculate_inception_score(path, nb, device, n_channel, img_size):
 def calculate_fid_score(path):
     path_true = os.path.join(path["path_out"], "reconstructions", "true_data")
     scores = dict()
-    for cur in ['orig', 'trunc', 'ada']:
+    for cur in ["orig", "trunc", "ada"]:
         path_out_data = os.path.join(path["path_out"], "reconstructions", cur + "_data")
         cur_scores = []
         for j in range(2):
             cur_path1 = os.path.join(path_out_data, str(j))
             for k in range(2):
                 cur_path = os.path.join(path_true, str(k))
-                res = subprocess.run(["python3", "-m", "pytorch_fid", cur_path, cur_path1], stdout=subprocess.PIPE)
+                res = subprocess.run(
+                    ["python3", "-m", "pytorch_fid", cur_path, cur_path1],
+                    stdout=subprocess.PIPE,
+                )
                 res = res.stdout.decode("utf-8")
                 cur_ans = float(res[6:-1])
                 cur_scores.append(cur_ans)
@@ -244,9 +261,9 @@ if __name__ == "__main__":
     torch.manual_seed(args.seed)
 
     path = {
-        "path_data": os.path.join('experiments', args.dataset, 'input'),
-        "path_model": os.path.join('experiments', args.dataset, 'vae', 'model'),
-        "path_out": os.path.join('experiments', args.dataset, 'vae', 'output')
+        "path_data": os.path.join("experiments", args.dataset, "input"),
+        "path_model": os.path.join("experiments", args.dataset, "vae", "model"),
+        "path_out": os.path.join("experiments", args.dataset, "vae", "output"),
     }
 
     if args.dataset == "mnist" or args.dataset == "mnist_imb":
@@ -264,11 +281,7 @@ if __name__ == "__main__":
         dataset = MNIST
     else:
         dataset = ImbalancedMNIST
-    true_data = dataset(
-        root=path['path_data'],
-        train=False,
-        img_size=img_size
-    )
+    true_data = dataset(root=path["path_data"], train=False, img_size=img_size)
 
     evaluate(
         true_data,
@@ -277,5 +290,5 @@ if __name__ == "__main__":
         args.number_generated_imgs,
         args.nb_inception,
         n_channel,
-        img_size
+        img_size,
     )

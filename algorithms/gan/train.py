@@ -33,7 +33,7 @@ class GanAlg:
         alpha,
     ):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        if not hasattr(self, 'name'):
+        if not hasattr(self, "name"):
             self.name = "orig"
         self.path_D = os.path.join(path_model, self.name + "D")
         self.path_G = os.path.join(path_model, self.name + "G")
@@ -44,11 +44,11 @@ class GanAlg:
             self.model_D = torch.load(self.path_D, map_location=torch.device("cpu"))
             self.model_G = torch.load(self.path_G, map_location=torch.device("cpu"))
         else:
-            if gan_model == 'gan':
+            if gan_model == "gan":
                 self.gaussian = True
                 self.model_D = Discriminator()
                 self.model_G = Generator(z_dim)
-            elif gan_model == 'img28':
+            elif gan_model == "img28":
                 self.model_D = Discriminator28()
                 self.model_G = Generator28(z_dim)
             else:
@@ -68,9 +68,9 @@ class GanAlg:
 
     def weights_init(self, m):
         classname = m.__class__.__name__
-        if classname.find('Conv') != -1:
+        if classname.find("Conv") != -1:
             nn.init.normal_(m.weight.data, 0.0, 0.02)
-        elif classname.find('BatchNorm') != -1:
+        elif classname.find("BatchNorm") != -1:
             nn.init.normal_(m.weight.data, 1.0, 0.02)
             nn.init.constant_(m.bias.data, 0)
 
@@ -84,7 +84,9 @@ class GanAlg:
                 self.optimizer_D.zero_grad()
                 real_images = real_images.to(self.device)
                 output_real = self.model_D(real_images)
-                label = torch.full((batch_size,), 1., dtype=torch.float, device=self.device)
+                label = torch.full(
+                    (batch_size,), 1.0, dtype=torch.float, device=self.device
+                )
                 loss_D_real = torch.mean(self.criterion(output_real, label))
                 loss_D_real.backward()
 
@@ -94,16 +96,15 @@ class GanAlg:
                     z = torch.randn(batch_size, self.z_dim, 1, 1, device=self.device)
                 fake_images = self.model_G(z)
                 output_fake = self.model_D(fake_images.detach())
-                label.fill_(0.)
+                label.fill_(0.0)
                 loss_D_fake = torch.mean(self.criterion(output_fake, label))
                 loss_D_fake.backward()
                 loss_D = (loss_D_real + loss_D_fake).item()
                 self.optimizer_D.step()
-                
 
                 # Train Generator
                 self.optimizer_G.zero_grad()
-                label.fill_(1.)
+                label.fill_(1.0)
                 output_D = self.model_D(fake_images)
                 loss_G = torch.mean(self.criterion(output_D, label))
                 loss_G.backward()
@@ -114,16 +115,9 @@ class GanAlg:
             running_loss_D /= self.num_batches
             running_loss_G /= self.num_batches
             mean, cvar, worst = self.evaluate(val=True)
-            wandb.log({
-                'loss_D': running_loss_D,
-                'loss_G': running_loss_G
-            })
+            wandb.log({"loss_D": running_loss_D, "loss_G": running_loss_G})
             if self.gaussian:
-                wandb.log({
-                    'val_mean': mean,
-                    'val_worst': worst,
-                    'val_cvar': cvar
-                })
+                wandb.log({"val_mean": mean, "val_worst": worst, "val_cvar": cvar})
             if save_model and epoch_idx % 50 == 0:
                 torch.save(self.model_D, self.path_D)
                 torch.save(self.model_G, self.path_G)
@@ -138,12 +132,14 @@ class GanAlg:
             n_components=n_clusters,
             n_init=20,
         )
-        recons = self.model_G.sample(true_data.shape[0], self.device).detach().cpu().numpy()
+        recons = (
+            self.model_G.sample(true_data.shape[0], self.device).detach().cpu().numpy()
+        )
         if output_path is not None:
             np.save(output_path, recons)
         fig = plt.figure()
         plt.scatter(recons[:, 0], recons[:, 1], s=1, color="black")
-        wandb.log({'recons': wandb.Image(fig)})
+        wandb.log({"recons": wandb.Image(fig)})
         plt.close()
         gmm.fit(recons)
         scores = -gmm.score_samples(true_data)
@@ -158,7 +154,7 @@ class GanAlg:
         img = np.transpose(make_grid(data, padding=5, normalize=True).cpu(), (1, 2, 0))
         fig = plt.figure()
         plt.imshow(img)
-        wandb.log({'recons': wandb.Image(fig)})
+        wandb.log({"recons": wandb.Image(fig)})
         plt.close()
 
     def evaluate(self, val, output_path=None):
@@ -236,7 +232,9 @@ class TruncCVar(GanAlg):
                 self.cvar.zero_grad()
                 real_images = real_images.to(self.device)
                 output_real = self.model_D(real_images)
-                label = torch.full((batch_size,), 1., dtype=torch.float, device=self.device)
+                label = torch.full(
+                    (batch_size,), 1.0, dtype=torch.float, device=self.device
+                )
                 loss_D_real = self.criterion(output_real, label)
 
                 # Update AdaCVaR based on output of discriminator
@@ -244,12 +242,18 @@ class TruncCVar(GanAlg):
                 if self.exp3 is not None:
                     prob = self.exp3.probabilities
                     self.exp3.update(
-                        1 - np.clip(loss_D_real.cpu().detach().numpy().reshape(batch_size), 0, 1), idx, prob
+                        1
+                        - np.clip(
+                            loss_D_real.cpu().detach().numpy().reshape(batch_size), 0, 1
+                        ),
+                        idx,
+                        prob,
                     )
                     self.exp3.normalize()
 
                 loss_D = (
-                    torch.tensor(weights).float().to(self.device) * self.cvar(loss_D_real)
+                    torch.tensor(weights).float().to(self.device)
+                    * self.cvar(loss_D_real)
                 ).sum()
                 loss_D.backward()
 
@@ -259,7 +263,7 @@ class TruncCVar(GanAlg):
                     z = torch.randn(batch_size, self.z_dim, 1, 1, device=self.device)
                 fake_images = self.model_G(z)
                 output_fake = self.model_D(fake_images.detach())
-                label.fill_(0.)
+                label.fill_(0.0)
                 loss_D_fake = torch.mean(self.criterion(output_fake, label))
                 loss_D_fake.backward()
                 loss_D = (loss_D + loss_D_fake).item()
@@ -268,7 +272,7 @@ class TruncCVar(GanAlg):
 
                 # Train Generator
                 self.optimizer_G.zero_grad()
-                label.fill_(1.)
+                label.fill_(1.0)
                 output_D = self.model_D(fake_images)
                 loss_G = torch.mean(self.criterion(output_D, label))
                 loss_G.backward()
@@ -280,16 +284,9 @@ class TruncCVar(GanAlg):
             running_loss_D /= nb
             running_loss_G /= nb
             mean, cvar, worst = self.evaluate(val=True)
-            wandb.log({
-                'loss_D': running_loss_D,
-                'loss_G': running_loss_G
-            })
+            wandb.log({"loss_D": running_loss_D, "loss_G": running_loss_G})
             if self.gaussian:
-                wandb.log({
-                    'val_mean': mean,
-                    'val_worst': worst,
-                    'val_cvar': cvar
-                })
+                wandb.log({"val_mean": mean, "val_worst": worst, "val_cvar": cvar})
             if save_model and epoch_idx % 50 == 0:
                 torch.save(self.model_D, self.path_D)
                 torch.save(self.model_G, self.path_G)

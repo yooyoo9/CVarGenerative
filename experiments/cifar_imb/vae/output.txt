@@ -1,0 +1,10 @@
+Inception scores
+orig: 1.69 +- 0.03
+trunc: 1.70 +- 0.03
+ada: 1.68 +- 0.03
+
+FID scores
+orig: 286.67 +- 0.64
+trunc: 285.73 +- 0.27
+ada: 293.25 +- 1.96
+

@@ -35,8 +35,8 @@ centers = [
 
 
 def generate_data(n):
-    path_x = os.path.join('input', 'X' + str(n) + '.npy')
-    path_y = os.path.join('input', 'Y' + str(n) + '.npy')
+    path_x = os.path.join("input", "X" + str(n) + ".npy")
+    path_y = os.path.join("input", "Y" + str(n) + ".npy")
 
     m = len(sample_distr)
     data = np.empty((2 * m, n + 1, 2))

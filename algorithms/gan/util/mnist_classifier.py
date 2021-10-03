@@ -19,16 +19,13 @@ class MnistClassifier:
             self.model = nn.Sequential(
                 nn.Conv2d(1, hidden_dim, 4, 2, 1, bias=False),
                 nn.LeakyReLU(0.2, inplace=True),
-
-                nn.Conv2d(hidden_dim, hidden_dim*2, 4, 2, 1, bias=False),
-                nn.BatchNorm2d(hidden_dim*2),
+                nn.Conv2d(hidden_dim, hidden_dim * 2, 4, 2, 1, bias=False),
+                nn.BatchNorm2d(hidden_dim * 2),
                 nn.LeakyReLU(0.2, inplace=True),
-
-                nn.Conv2d(hidden_dim*2, hidden_dim*4, 3, 2, 1, bias=False),
-                nn.BatchNorm2d(hidden_dim*4),
+                nn.Conv2d(hidden_dim * 2, hidden_dim * 4, 3, 2, 1, bias=False),
+                nn.BatchNorm2d(hidden_dim * 4),
                 nn.LeakyReLU(0.2, inplace=True),
-
-                nn.Conv2d(hidden_dim*4, 10, 4, 1, 0, bias=False),
+                nn.Conv2d(hidden_dim * 4, 10, 4, 1, 0, bias=False),
                 nn.Softmax(dim=1),
             )
         self.model.to(self.device)
@@ -51,9 +48,7 @@ class MnistClassifier:
         self.val_loader = torch.utils.data.DataLoader(
             valid_set, batch_size=128, shuffle=True
         )
-        self.optimizer = torch.optim.SGD(
-            self.model.parameters(), lr=0.05, momentum=0.9
-        )
+        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=0.05, momentum=0.9)
         self.criterion = nn.CrossEntropyLoss()
 
         if train:

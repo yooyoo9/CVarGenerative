@@ -9,17 +9,14 @@ class Discriminator28(nn.Module):
         self.model = nn.Sequential(
             nn.Conv2d(1, hdim, 4, 2, 1, bias=False),
             nn.LeakyReLU(0.2, inplace=True),
-
-            nn.Conv2d(hdim, hdim*2, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(hdim*2),
+            nn.Conv2d(hdim, hdim * 2, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(hdim * 2),
             nn.LeakyReLU(0.2, inplace=True),
-
-            nn.Conv2d(hdim*2, hdim*4, 3, 2, 1, bias=False),
-            nn.BatchNorm2d(hdim*4),
+            nn.Conv2d(hdim * 2, hdim * 4, 3, 2, 1, bias=False),
+            nn.BatchNorm2d(hdim * 4),
             nn.LeakyReLU(0.2, inplace=True),
-
-            nn.Conv2d(hdim*4, 1, 4, 1, 0, bias=False),
-            nn.Sigmoid()
+            nn.Conv2d(hdim * 4, 1, 4, 1, 0, bias=False),
+            nn.Sigmoid(),
         )
 
     def forward(self, z):
@@ -33,26 +30,23 @@ class Generator28(nn.Module):
         self.z_dim = z_dim
         hdim = 32
         self.model = nn.Sequential(
-            nn.ConvTranspose2d(z_dim, hdim*4, 4, 1, 0, bias=False),
-            nn.BatchNorm2d(hdim*4),
+            nn.ConvTranspose2d(z_dim, hdim * 4, 4, 1, 0, bias=False),
+            nn.BatchNorm2d(hdim * 4),
             nn.ReLU(True),
-
-            nn.ConvTranspose2d(hdim*4, hdim*2, 3, 2, 1, bias=False),
-            nn.BatchNorm2d(hdim*2),
+            nn.ConvTranspose2d(hdim * 4, hdim * 2, 3, 2, 1, bias=False),
+            nn.BatchNorm2d(hdim * 2),
             nn.ReLU(True),
-
-            nn.ConvTranspose2d(hdim*2, hdim, 4, 2, 1, bias=False),
+            nn.ConvTranspose2d(hdim * 2, hdim, 4, 2, 1, bias=False),
             nn.BatchNorm2d(hdim),
             nn.ReLU(True),
-
             nn.ConvTranspose2d(hdim, 1, 4, 2, 1, bias=False),
-            nn.Tanh()
+            nn.Tanh(),
         )
 
     def forward(self, z):
         result = self.model(z)
         return result
-                
+
     def sample(self, num_samples, device):
         """Samples from the latent space and return the corresponding objects in the input space.
 

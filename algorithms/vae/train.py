@@ -62,10 +62,14 @@ class VaeAlg:
         self.train_loader = DataLoader(train_set, batch_size, shuffle=True)
         self.val_loader = DataLoader(valid_set, batch_size, shuffle=False)
         self.test_loader = DataLoader(test_set, batch_size, shuffle=False)
-        if optim_param['name'] == 'adam':
-            self.optimizer = optim.Adam(self.model.parameters(), lr=optim_param['lr'])
+        if optim_param["name"] == "adam":
+            self.optimizer = optim.Adam(self.model.parameters(), lr=optim_param["lr"])
         else:
-            self.optimizer = optim.SGD(self.model.parameters(), lr=optim_param['lr'], momentum=optim_param['momentum'])
+            self.optimizer = optim.SGD(
+                self.model.parameters(),
+                lr=optim_param["lr"],
+                momentum=optim_param["momentum"],
+            )
         self.criterion = criterion
         self.alpha = alpha
         self.beta = beta
@@ -109,16 +113,11 @@ class VaeAlg:
                 self.optimizer.step()
             train_loss = running_loss / len(self.train_loader.dataset)
             val_loss, val_mean, val_worst, val_cvar = self.evaluate(val=True)
-            wandb.log({
-                'train_loss': train_loss,
-                'val_loss': val_loss
-            })
+            wandb.log({"train_loss": train_loss, "val_loss": val_loss})
             if self.gaussian:
-                wandb.log({
-                    'val_mean': val_mean,
-                    'val_worst': val_worst,
-                    'val_cvar': val_cvar
-                })
+                wandb.log(
+                    {"val_mean": val_mean, "val_worst": val_worst, "val_cvar": val_cvar}
+                )
             if val_loss < min_val_loss:
                 min_val_loss = val_loss
                 epochs_no_improve = 0
@@ -138,12 +137,14 @@ class VaeAlg:
             n_components=n_clusters,
             n_init=20,
         )
-        recons = self.model.sample(true_data.shape[0], self.device).detach().cpu().numpy()
+        recons = (
+            self.model.sample(true_data.shape[0], self.device).detach().cpu().numpy()
+        )
         if output_path is not None:
             np.save(output_path, recons)
         fig = plt.figure()
         plt.scatter(recons[:, 0], recons[:, 1], s=1, color="black")
-        wandb.log({'recons': wandb.Image(fig)})
+        wandb.log({"recons": wandb.Image(fig)})
         plt.close()
         gmm.fit(recons)
         scores = -gmm.score_samples(true_data)
@@ -159,7 +160,7 @@ class VaeAlg:
         img = np.transpose(make_grid(data, padding=5, normalize=True).cpu(), (1, 2, 0))
         fig = plt.figure()
         plt.imshow(img)
-        wandb.log({'recons': wandb.Image(fig)})
+        wandb.log({"recons": wandb.Image(fig)})
         plt.close()
 
     def evaluate(self, val, output_path=None):
@@ -183,7 +184,9 @@ class VaeAlg:
             val_loss = running_loss / len(dataloader.dataset)
 
             if self.gaussian:
-                val_mean, val_worst, val_cvar = self.eval_gaussian(dataloader.dataset, output_path)
+                val_mean, val_worst, val_cvar = self.eval_gaussian(
+                    dataloader.dataset, output_path
+                )
             elif np.random.randint(10) == 0:
                 self.create_recons()
         return val_loss, val_mean, val_worst, val_cvar
@@ -220,7 +223,7 @@ class TruncCVar(VaeAlg):
             beta,
         )
         self.exp3 = None
-        self.cvar = CVaR(alpha=alpha, learning_rate=optim_param['lr']).to(self.device)
+        self.cvar = CVaR(alpha=alpha, learning_rate=optim_param["lr"]).to(self.device)
 
     def train(self, epochs, early_stop, save_model):
         """Trains the CVaR VAE using the training set
@@ -266,16 +269,11 @@ class TruncCVar(VaeAlg):
                 running_loss += loss.sum().item()
             train_loss = running_loss / len(self.train_loader.dataset)
             val_loss, val_mean, val_worst, val_cvar = self.evaluate(val=True)
-            wandb.log({
-                'train_loss': train_loss,
-                'val_loss': val_loss
-            })
+            wandb.log({"train_loss": train_loss, "val_loss": val_loss})
             if self.gaussian:
-                wandb.log({
-                    'val_mean': val_mean,
-                    'val_worst': val_worst,
-                    'val_cvar': val_cvar
-                })
+                wandb.log(
+                    {"val_mean": val_mean, "val_worst": val_worst, "val_cvar": val_cvar}
+                )
             if val_loss < min_val_loss:
                 min_val_loss = val_loss
                 epochs_no_improve = 0
@@ -309,7 +307,9 @@ class TruncCVar(VaeAlg):
         val_loss = running_loss / len(dataloader.dataset)
 
         if self.gaussian:
-            val_mean, val_worst, val_cvar = self.eval_gaussian(dataloader.dataset, output_path)
+            val_mean, val_worst, val_cvar = self.eval_gaussian(
+                dataloader.dataset, output_path
+            )
         elif np.random.randint(10) == 0:
             self.create_recons()
         return val_loss, val_mean, val_worst, val_cvar

@@ -13,7 +13,7 @@ class Discriminator(nn.Module):
             nn.Linear(64, 64),
             nn.LeakyReLU(0.2, inplace=True),
             nn.Linear(64, 1),
-            nn.Sigmoid()
+            nn.Sigmoid(),
         )
 
     def forward(self, z):
@@ -28,20 +28,17 @@ class Generator(nn.Module):
         self.model = nn.Sequential(
             nn.Linear(z_dim, 64),
             nn.ReLU(True),
-
             nn.Linear(64, 64),
             nn.ReLU(True),
-
             nn.Linear(64, 64),
             nn.ReLU(True),
-
-            nn.Linear(64, 2)
+            nn.Linear(64, 2),
         )
 
     def forward(self, z):
         result = self.model(z)
         return result
-                
+
     def sample(self, num_samples, device):
         """Samples from the latent space and return the corresponding objects in the input space.
 

@@ -1,0 +1,5 @@
+Inception scores
+gan: 2.36 +- 0.03
+rocka: 2.47 +- 0.05
+ada: 2.38 +- 0.06
+
