@@ -16,13 +16,6 @@ colors = np.array(
         "#999999",
     ]
 )
-colors1 = np.array([colors[5], colors[6], colors[1], colors[3], colors[0], colors[2], colors[4]])
-colors2 = np.array([colors[5], colors[0], colors[4], colors[2], colors[3], colors[6], colors[1]])
-change = [1, 6, 3, 4, 2, 5, 0]
-
-# change = [3, 2, 4, 1, 0, 6, 5]
-# colors1 = np.array([colors[5], colors[6], colors[0], colors[2], colors[1], colors[4], colors[3]])
-# colors2 = np.array([colors[4], colors[3], colors[1], colors[0], colors[2], colors[6], colors[5]])
 
 std = np.array([0.08, 0.02, 0.02, 0.02, 0.02, 0.002, 0.002])
 centers = np.array([
@@ -34,7 +27,6 @@ centers = np.array([
         [0, 0.7],
         [0, -0.7],
     ])
-# markers = np.array([",", "1", "2", "3", "4", "+", "x"])
 
 
 def plot_ellipse(mean, covar, color='red', ax=None):
@@ -76,29 +68,26 @@ def synthetic_gmm(dataset):
     fig, (ax, ax1, ax2) = plt.subplots(ncols=3, nrows=1, gridspec_kw = {'wspace':0, 'hspace':0})
     fig.set_size_inches(5.5, 1)
 
-    # means[1][change[5]][1] -= 0.7
-    # covs[1][change[5]] = np.eye(2) * std[6]
-
     ax.set_title("True data")
     ax.axis("equal")
     for i in range(7):
         ax.scatter(data[:, 1][true_y==i], data[:, 0][true_y==i], s=0.1, c=colors[i])
         cur_cov = np.eye(2) * std[i]
-        plot_ellipse(np.flip(means[1][change[i]]), cur_cov, colors[i], ax)
+        plot_ellipse(np.flip(means[1][i]), cur_cov, colors[i], ax)
     hide_all_ticks(ax)
     ax1.set_title("EM")
     ax1.axis("equal")
     for i in range(7):
         print(means[1][i])
-        ax1.scatter(data[:, 1][gmm_y == i], data[:, 0][gmm_y == i], s=0.1, c=colors1[i])
-        plot_ellipse(np.flip(means[0][i]), covs[0][i], colors1[i], ax1)
+        ax1.scatter(data[:, 1][gmm_y == i], data[:, 0][gmm_y == i], s=0.1, c=colors[i])
+        plot_ellipse(np.flip(means[0][i]), covs[0][i], colors[i], ax1)
     hide_all_ticks(ax1)
     ax2.set_title("HAdaCVaR-EM")
     ax2.axis("equal")
     for i in range(7):
         ax2.scatter(data[:, 1][cvar_y == i], data[:, 0][cvar_y == i], s=0.1
-                    , c=colors2[i])
-        plot_ellipse(np.flip(means[1][i]), covs[1][i], colors2[i], ax2)
+                    , c=colors[i])
+        plot_ellipse(np.flip(means[1][i]), covs[1][i], colors[i], ax2)
     hide_all_ticks(ax2)
     adapt_figure_size_from_axes((ax, ax1, ax2))
     plt.subplots_adjust(left=0.01, right=0.99, top=0.8, bottom=0.05)
