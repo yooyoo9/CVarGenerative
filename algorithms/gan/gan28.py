@@ -5,19 +5,20 @@ from torch import nn
 class Discriminator28(nn.Module):
     def __init__(self):
         super().__init__()
+        hdim = 32
         self.model = nn.Sequential(
-            nn.Conv2d(1, 32, 4, 2, 1, bias=False),
+            nn.Conv2d(1, hdim, 4, 2, 1, bias=False),
             nn.LeakyReLU(0.2, inplace=True),
 
-            nn.Conv2d(32, 64, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(64),
+            nn.Conv2d(hdim, hdim*2, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(hdim*2),
             nn.LeakyReLU(0.2, inplace=True),
 
-            nn.Conv2d(64, 128, 3, 2, 1, bias=False),
-            nn.BatchNorm2d(128),
+            nn.Conv2d(hdim*2, hdim*4, 3, 2, 1, bias=False),
+            nn.BatchNorm2d(hdim*4),
             nn.LeakyReLU(0.2, inplace=True),
 
-            nn.Conv2d(128, 1, 4, 1, 0, bias=False),
+            nn.Conv2d(hdim*4, 1, 4, 1, 0, bias=False),
             nn.Sigmoid()
         )
 
@@ -30,20 +31,21 @@ class Generator28(nn.Module):
     def __init__(self, z_dim):
         super().__init__()
         self.z_dim = z_dim
+        hdim = 32
         self.model = nn.Sequential(
-            nn.ConvTranspose2d(z_dim, 128, 4, 1, 0, bias=False),
-            nn.BatchNorm2d(128),
+            nn.ConvTranspose2d(z_dim, hdim*4, 4, 1, 0, bias=False),
+            nn.BatchNorm2d(hdim*4),
             nn.ReLU(True),
 
-            nn.ConvTranspose2d(128, 64, 3, 2, 1, bias=False),
-            nn.BatchNorm2d(64),
+            nn.ConvTranspose2d(hdim*4, hdim*2, 3, 2, 1, bias=False),
+            nn.BatchNorm2d(hdim*2),
             nn.ReLU(True),
 
-            nn.ConvTranspose2d(64, 32, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(32),
+            nn.ConvTranspose2d(hdim*2, hdim, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(hdim),
             nn.ReLU(True),
 
-            nn.ConvTranspose2d(32, 1, 4, 2, 1, bias=False),
+            nn.ConvTranspose2d(hdim, 1, 4, 2, 1, bias=False),
             nn.Tanh()
         )
 

@@ -155,3 +155,49 @@ class CIFAR10(Datasets):
             transform=self.transform,
         )
         self.dataset = self.get_split(dataset, train)
+
+
+class ImbalancedCIFAR10(Datasets):
+    def __init__(self, root, train, img_size):
+        mean, std = (0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261)
+        super().__init__(img_size, mean, std)
+        dataset = datasets.CIFAR10(
+            root=root,
+            train=train,
+            download=True,
+            transform=self.transform,
+        )
+        self.dataset = self.get_split(dataset, train)
+        self.train = False if train == 2 else True
+        ratio = [7, 6, 5, 9, 3, 8, 2, 4, 1, 0]
+        self.class_distr = np.array([0.7 ** ratio[i] for i in range(10)])
+        self.class_distr /= np.sum(self.class_distr)
+        self.idx = self.resample()
+
+    def resample(self):
+        if self.train:
+            targets = self.dataset.dataset.targets
+        else:
+            targets = self.dataset.targets
+        targets = np.array(targets)
+        _, class_counts = np.unique(targets, return_counts=True)
+        # Get class indices for resampling
+        class_indices = [np.where(targets == i)[0] for i in range(10)]
+        # Get class indices for reduced class count
+        idx = []
+        for i in range(10):
+            cur_count = int(class_counts[i] * self.class_distr[i])
+            idx.append(class_indices[i][:cur_count])
+        idx = np.hstack(idx)
+        np.random.shuffle(idx)
+        return idx
+
+    def __getitem__(self, index):
+        if self.train:
+            img, _ = self.dataset.dataset[self.idx[index]]
+        else:
+            img, _ = self.dataset[self.idx[index]]
+        return img, index
+
+    def __len__(self):
+        return len(self.idx)

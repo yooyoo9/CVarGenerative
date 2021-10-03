@@ -5,13 +5,12 @@ import argparse
 import wandb
 
 from train import VaeAlg, TruncCVar, AdaCVar
-from datasets import GaussianDataSet, MNIST, ImbalancedMNIST, CelebA, CIFAR10
+from datasets import GaussianDataSet, MNIST, ImbalancedMNIST, CelebA, CIFAR10, ImbalancedCIFAR10
 
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--dataset_nb", type=int, default=0)
-parser.add_argument("--dataset", default="celeba", choices=set(("gaussian", "mnist", "mnist_imb", "cifar10", "celeba")))
-
+parser.add_argument("--dataset", default="celeba")
 parser.add_argument("--model", type=str, default='ada', choices=['vae', 'ada', 'trunc'])
 parser.add_argument("--alpha", type=float, default=0.3)
 parser.add_argument("--epochs", type=int, default=1)
@@ -41,7 +40,7 @@ if args.dataset == 'gaussian':
     path_out = os.path.join('experiments/synthetic/vae/output', str(args.dataset_nb), args.model + '.npy')
 else:
     path_data = os.path.join('experiments', args.dataset, 'input')
-    path_model = os.path.join('experiments', args.dataset, 'vae', 'model')
+    path_model = os.path.join('experiments', args.dataset, 'vae', 'model', str(args.seed))
     for cur_dir in [path_data, path_model]:
         if not os.path.exists(cur_dir):
             os.makedirs(cur_dir)
@@ -76,7 +75,12 @@ else:
             "img_size": img_size,
         }
     else:
-        dataset = CIFAR10 if args.dataset == "cifar10" else CelebA
+        if args.dataset == 'cifar':
+            dataset = CIFAR10
+        elif args.dataset == 'cifar_imb':
+            dataset = ImbalancedCIFAR10
+        else:
+            dataset = CelebA
         img_size = 64
         model_param = {
             "n_channel": 3,
@@ -137,10 +141,10 @@ elif args.model == 'ada':
 model.train(args.epochs, args.early_stop, args.save_model)
 
 if args.dataset == 'gaussian':
-    test_loss, test_nll_true, test_nll_cur, test_cvar = model.evaluate(val=False, output_path=path_out)
+    test_loss, test_mean, test_worst, test_cvar = model.evaluate(val=False, output_path=path_out)
     wandb.log({
         'test_loss': test_loss,
-        'test_nll_true': test_nll_true,
-        'test_nll_cur': test_nll_cur,
+        'test_mean': test_mean,
+        'test_worst': test_worst,
         'test_cvar': test_cvar
     })

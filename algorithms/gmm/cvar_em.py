@@ -95,7 +95,7 @@ class CVarEM:
         range_score = max_clip - min_clip
 
         best_loss, best_worst_loss, best_mean_loss = 1e8, 1e8, 1e8
-        prediction = None
+        prediction, means, covs = None, None, None
         nb_iters = 0
         while nb_iters < self.threshold:
             nb_iters += 1
@@ -127,6 +127,8 @@ class CVarEM:
                 best_worst_loss = np.max(test_nll)
                 best_mean_loss = np.mean(test_nll)
                 prediction = self.gm.predict(test_data)
+                means = self.gm.means_
+                covs = self.gm.covariances_
 
                 fig = plt.figure()
                 plt.axis("equal")
@@ -144,4 +146,4 @@ class CVarEM:
                 "CVaR-EM final mean loss": best_mean_loss,
             }
         )
-        return prediction
+        return prediction, means, covs

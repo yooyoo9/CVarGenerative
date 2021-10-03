@@ -6,18 +6,13 @@ class Discriminator(nn.Module):
     def __init__(self):
         super().__init__()
         self.model = nn.Sequential(
-            nn.Conv2d(1, 32, 4, 2, 1, bias=False),
+            nn.Linear(2, 64),
             nn.LeakyReLU(0.2, inplace=True),
-
-            nn.Conv2d(32, 64, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(64),
+            nn.Linear(64, 64),
             nn.LeakyReLU(0.2, inplace=True),
-
-            nn.Conv2d(64, 128, 3, 2, 1, bias=False),
-            nn.BatchNorm2d(128),
+            nn.Linear(64, 64),
             nn.LeakyReLU(0.2, inplace=True),
-
-            nn.Conv2d(128, 1, 4, 1, 0, bias=False),
+            nn.Linear(64, 1),
             nn.Sigmoid()
         )
 
@@ -31,20 +26,16 @@ class Generator(nn.Module):
         super().__init__()
         self.z_dim = z_dim
         self.model = nn.Sequential(
-            nn.ConvTranspose2d(z_dim, 128, 4, 1, 0, bias=False),
-            nn.BatchNorm2d(128),
+            nn.Linear(z_dim, 64),
             nn.ReLU(True),
 
-            nn.ConvTranspose2d(128, 64, 3, 2, 1, bias=False),
-            nn.BatchNorm2d(64),
+            nn.Linear(64, 64),
             nn.ReLU(True),
 
-            nn.ConvTranspose2d(64, 32, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(32),
+            nn.Linear(64, 64),
             nn.ReLU(True),
 
-            nn.ConvTranspose2d(32, 1, 4, 2, 1, bias=False),
-            nn.Tanh()
+            nn.Linear(64, 2)
         )
 
     def forward(self, z):
@@ -66,6 +57,6 @@ class Generator(nn.Module):
         samples: torch.tensor
 
         """
-        latent_var = torch.randn(num_samples, self.z_dim, 1, 1).to(device)
+        latent_var = torch.randn(num_samples, self.z_dim).to(device)
         samples = self.forward(latent_var)
         return samples

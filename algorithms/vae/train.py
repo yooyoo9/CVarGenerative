@@ -35,18 +35,21 @@ class VaeAlg:
             self.name = "orig"
         self.model_path = os.path.join(model_path, self.name)
 
-        if os.path.exists(self.model_path):
-            self.model = torch.load(self.model_path, map_location=torch.device("cpu"))
+        if model_name == "VAE":
+            self.gaussian = True
         else:
+            self.gaussian = False
+
+        # if os.path.exists(self.model_path):
+        #     self.model = torch.load(self.model_path, map_location=torch.device("cpu"))
+        if True:
             if model_name == "VAE":
-                self.gaussian = True
                 self.model = VAE(
                     x_dim=model_param["x_dim"],
                     hidden_dims=model_param["hidden_dims"],
                     z_dim=model_param["z_dim"],
                 )
             else:
-                self.gaussian = False
                 self.img_size = model_param["img_size"]
                 self.model = VaeImg(
                     n_channel=model_param["n_channel"],
@@ -59,7 +62,7 @@ class VaeAlg:
         self.train_loader = DataLoader(train_set, batch_size, shuffle=True)
         self.val_loader = DataLoader(valid_set, batch_size, shuffle=False)
         self.test_loader = DataLoader(test_set, batch_size, shuffle=False)
-        if optim_param['name'] == 'Adam':
+        if optim_param['name'] == 'adam':
             self.optimizer = optim.Adam(self.model.parameters(), lr=optim_param['lr'])
         else:
             self.optimizer = optim.SGD(self.model.parameters(), lr=optim_param['lr'], momentum=optim_param['momentum'])
@@ -105,15 +108,15 @@ class VaeAlg:
                 loss.backward()
                 self.optimizer.step()
             train_loss = running_loss / len(self.train_loader.dataset)
-            val_loss, val_ll_true, val_ll_cur, val_cvar = self.evaluate(val=True)
+            val_loss, val_mean, val_worst, val_cvar = self.evaluate(val=True)
             wandb.log({
                 'train_loss': train_loss,
                 'val_loss': val_loss
             })
             if self.gaussian:
                 wandb.log({
-                    'val_nll_true': val_ll_true,
-                    'val_nll_cur': val_ll_cur,
+                    'val_mean': val_mean,
+                    'val_worst': val_worst,
                     'val_cvar': val_cvar
                 })
             if val_loss < min_val_loss:
@@ -123,6 +126,8 @@ class VaeAlg:
                 epochs_no_improve += 1
             if epochs_no_improve == early_stop:
                 return
+            if save_model and epoch_idx % 50 == 0:
+                torch.save(self.model, self.model_path)
         if save_model:
             torch.save(self.model, self.model_path)
 
@@ -141,11 +146,12 @@ class VaeAlg:
         wandb.log({'recons': wandb.Image(fig)})
         plt.close()
         gmm.fit(recons)
-        nll_true = np.mean(-gmm.score_samples(true_data))
-        nll_cur = np.mean(-gmm.score_samples(recons))
+        scores = -gmm.score_samples(true_data)
         k = int(np.round(self.alpha * len(dataset)))
-        cvar_cur = np.mean((-gmm.score_samples(recons))[-k:])
-        return nll_true, nll_cur, cvar_cur
+        cvar = np.mean(np.sort(scores)[-k:])
+        worst = np.max(scores)
+        mean = np.mean(scores)
+        return mean, cvar, worst
 
     def create_recons(self):
         with torch.no_grad():
@@ -167,7 +173,7 @@ class VaeAlg:
         self.model.eval()
         dataloader = self.val_loader if val else self.test_loader
         running_loss = 0.0
-        nll_true, nll_cur, cvar_cur = None, None, None
+        val_mean, val_worst, val_cvar = None, None, None
         with torch.no_grad():
             for (data, *_) in dataloader:
                 data = data.to(self.device)
@@ -177,10 +183,10 @@ class VaeAlg:
             val_loss = running_loss / len(dataloader.dataset)
 
             if self.gaussian:
-                nll_true, nll_cur, cvar_cur = self.eval_gaussian(dataloader.dataset, output_path)
+                val_mean, val_worst, val_cvar = self.eval_gaussian(dataloader.dataset, output_path)
             elif np.random.randint(10) == 0:
                 self.create_recons()
-        return val_loss, nll_true, nll_cur, cvar_cur
+        return val_loss, val_mean, val_worst, val_cvar
 
 
 class TruncCVar(VaeAlg):
@@ -259,15 +265,15 @@ class TruncCVar(VaeAlg):
 
                 running_loss += loss.sum().item()
             train_loss = running_loss / len(self.train_loader.dataset)
-            val_loss, val_ll_true, val_ll_cur, val_cvar = self.evaluate(val=True)
+            val_loss, val_mean, val_worst, val_cvar = self.evaluate(val=True)
             wandb.log({
                 'train_loss': train_loss,
                 'val_loss': val_loss
             })
             if self.gaussian:
                 wandb.log({
-                    'val_nll_true': val_ll_true,
-                    'val_nll_cur': val_ll_cur,
+                    'val_mean': val_mean,
+                    'val_worst': val_worst,
                     'val_cvar': val_cvar
                 })
             if val_loss < min_val_loss:
@@ -277,6 +283,8 @@ class TruncCVar(VaeAlg):
                 epochs_no_improve += 1
             if epochs_no_improve == early_stop:
                 return
+            if save_model and epoch_idx % 50 == 0:
+                torch.save(self.model, self.model_path)
         if save_model:
             torch.save(self.model, self.model_path)
 
@@ -290,7 +298,7 @@ class TruncCVar(VaeAlg):
         """
         dataloader = self.val_loader if val else self.test_loader
         self.model.eval()
-        nll_true, nll_cur, cvar_cur = None, None, None
+        val_mean, val_worst, val_cvar = None, None, None
         running_loss = 0.0
         with torch.no_grad():
             for data, _ in dataloader:
@@ -301,10 +309,10 @@ class TruncCVar(VaeAlg):
         val_loss = running_loss / len(dataloader.dataset)
 
         if self.gaussian:
-            nll_true, nll_cur, cvar_cur = self.eval_gaussian(dataloader.dataset, output_path)
+            val_mean, val_worst, val_cvar = self.eval_gaussian(dataloader.dataset, output_path)
         elif np.random.randint(10) == 0:
             self.create_recons()
-        return val_loss, nll_true, nll_cur, cvar_cur
+        return val_loss, val_mean, val_worst, val_cvar
 
 
 class AdaCVar(TruncCVar):

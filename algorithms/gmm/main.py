@@ -25,7 +25,7 @@ if args.reproduce:
     thres = [1000, 1000, 3000, 1000, 1000, 1000, 1000, 1000, 2000, 1000]
     lr = [0.5, 0.5, 0.01, 0.01, 0.5, 0.5, 0.5, 0.5, 0.01, 0.01]
     alphas = [0.1, 0.1, 0.3, 0.3, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
-    datasets = np.arange(10)
+    datasets = [2,3]
 else:
     datasets = [args.dataset]
 
@@ -74,8 +74,13 @@ for i in datasets:
         init_params="kmeans",
     )
 
+    cluster_means = np.empty((2, n_clusters, 2))
+    cluster_covs = np.empty((2, n_clusters, 2, 2))
+
     gmm.fit(X_train)
     gmm_y = gmm.predict(X_test)
+    cluster_means[0] = gmm.means_
+    cluster_covs[0] = gmm.covariances_
     nll = -gmm.score_samples(X_test)
     k_test = int(np.ceil(args.alpha * n))
     wandb.log(
@@ -86,9 +91,11 @@ for i in datasets:
         }
     )
 
-    y_pred = cvar.fit_predict(X_train, X_val, X_test)
+    y_pred, cluster_means[1], cluster_covs[1] = cvar.fit_predict(X_train, X_val, X_test)
 
     results = np.empty((len(X_test), len(X_test[0]) + 3))
     results[:, :-3] = X_test
     results[:, -3], results[:, -2], results[:, -1] = y_test, gmm_y, y_pred
     np.save(os.path.join(output_path, "data" + name + "_predictions.npy"), results)
+    np.save(os.path.join(output_path, "data" + name + "_means.npy"), cluster_means)
+    np.save(os.path.join(output_path, "data" + name + "_covariances.npy"), cluster_covs)
